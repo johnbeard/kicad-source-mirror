@@ -64,7 +64,7 @@ class RowedFootprint(HFPW.HelpfulFootprintWizardPlugin):
 
         pin1Pos = pcbnew.wxPoint(-((num_rows - 1) * row_pitch) / 2, -row_length / 2)
 
-        array = RowedGridArray(pad, num_rows, pads_per_row, row_pitch, pad_pitch, pin1Pos)
+        array = RowedGridArray(pad, num_rows, pads_per_row, row_pitch, pad_pitch)
         array.AddPadsToModule()
 
         # draw the Silk Screen
@@ -81,7 +81,6 @@ class RowedFootprint(HFPW.HelpfulFootprintWizardPlugin):
 
         ssX = -pin1Pos.x - ssXOffset
         ssY = -pin1Pos.y - ssYOffset
-
 
         self.DrawBox(ssX, ssY)
 
@@ -149,11 +148,12 @@ class SDIPWizard(RowedFootprint):
             #  -----------------
             #  |1|2 3 4 5 6 7 8|
             #  -----------------
-            self.draw.Box(ssX*2, ssY*2)
+            self.draw.Box(0, 0, ssX*2, ssY*2)
 
             #line between pin1 and pin2
-            pad_pitch = self.parameters["Pads"]["pad pitch"];
-            self.draw.HLine(-ssX, pin1Pos.y + pad_pitch/2, ssX * 2)
+            pad_pitch = self.parameters["Pads"]["pad pitch"]
+            lineY = - (self.parameters["Pads"]["*n"] - 2) * pad_pitch / 2;
+            self.draw.HLine(-ssX, lineY, ssX * 2)
 
         return ssX, ssY
 

@@ -39,8 +39,9 @@ class PadMaker:
 
 class PadArray:
 
-    def __init__(self):
-        self.firstPad = 1;
+    def __init__(self, pinNames=None):
+        self.firstPad = 1
+        self.pinNames = pinNames
 
     def SetFirstPadInArray(self, fpNum):
         self.firstPad = fpNum
@@ -63,7 +64,8 @@ class PadArray:
 
 class PadGridArray(PadArray):
 
-    def __init__(self, pad, nx, ny, px, py, pin1Pos):
+    def __init__(self, pad, nx, ny, px, py, centre=pcbnew.wxPoint(0,0), pinNames=None):
+        PadArray.__init__(self, pinNames)
         # this pad is more of a "context", we will use it as a source of
         # pad data, but not actually add it
         self.pad = pad
@@ -71,7 +73,7 @@ class PadGridArray(PadArray):
         self.ny = int(ny)
         self.px = px
         self.py = py
-        self.pin1Pos = pin1Pos
+        self.centre = centre
 
     # handy utility function 1 - A, 2 - B, 26 - AA, etc
     # aIndex = 0 for 0 - A
@@ -93,10 +95,15 @@ class PadGridArray(PadArray):
     #relocate the pad and add it as many times as we need
     def AddPadsToModule(self):
 
+        pin1posX = self.centre.x - self.px * (self.nx - 1) / 2
+        pin1posY = self.centre.y - self.py * (self.ny - 1) / 2
+
         for x in range(0, self.nx):
+
+            posX = pin1posX + (x * self.px)
+
             for y in range(self.ny):
-                posX = self.pin1Pos.x + (self.px * x)
-                posY = self.pin1Pos.y + (self.py * y)
+                posY = pin1posY + (self.py * y)
 
                 pos = pcbnew.wxPoint(posX, posY)
 
@@ -107,43 +114,18 @@ class PadGridArray(PadArray):
                 pad.SetPos0(pos)
                 pad.SetPosition(pos)
 
-                pad.SetPadName(str(self.NamingFunction(x,y)))
+                if self.pinNames == None:
+                    pad.SetPadName(str(self.NamingFunction(x,y)))
+                else:
+                    pad.SetPadName(self.pinNames)
 
                 self.AddPad(pad)
 
 class PadLineArray(PadGridArray):
 
-    def __init__(self, pad, n, pitch, isVertical, pin1Pos):
+    def __init__(self, pad, n, pitch, isVertical, centre=pcbnew.wxPoint(0,0), pinNames=None):
 
         if isVertical:
-            PadGridArray.__init__(self, pad, 1, n, 0, pitch, pin1Pos)
+            PadGridArray.__init__(self, pad, 1, n, 0, pitch, centre, pinNames)
         else:
-            PadGridArray.__init__(self, pad, n, 1, pitch, 0, pin1Pos)
-
-class RectPadArray(PadArray):
-
-    def __init__(self, nx, ny, pitch, xpitch, ypitch, pin1Pos):
-
-        #left row
-        pin1Pos = pcbnew.wxPoint(-h_pitch / 2, -row_len / 2)
-        array = PadLineArray(h_pad, pads_per_row, pad_pitch, True, pin1Pos)
-        array.SetFirstPadInArray(1)
-        array.AddPadsToModule()
-
-        #bottom row
-        pin1Pos = pcbnew.wxPoint(-row_len / 2, v_pitch / 2)
-        array = PA.PadLineArray(v_pad, pads_per_row, pad_pitch, False, pin1Pos)
-        array.SetFirstPadInArray(pads_per_row + 1)
-        array.AddPadsToModule()
-
-        #right row
-        pin1Pos = pcbnew.wxPoint(h_pitch / 2, row_len / 2)
-        array = PadLineArray(h_pad, pads_per_row, -pad_pitch, True, pin1Pos)
-        array.SetFirstPadInArray(2*pads_per_row + 1)
-        array.AddPadsToModule()
-
-        #top row
-        pin1Pos = pcbnew.wxPoint(row_len / 2, -v_pitch / 2)
-        array = PadLineArray(v_pad, pads_per_row, -pad_pitch, False, pin1Pos)
-        array.SetFirstPadInArray(3*pads_per_row + 1)
-        array.AddPadsToModule()
+            PadGridArray.__init__(self, pad, n, 1, pitch, 0, centre, pinNames)

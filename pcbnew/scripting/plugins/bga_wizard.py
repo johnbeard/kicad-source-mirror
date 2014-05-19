@@ -79,7 +79,7 @@ class BGAWizard(HFPW.HelpfulFootprintWizardPlugin):
         pin1Pos = pcbnew.wxPoint(-((cols - 1) * pad_pitch) / 2,
                                  -((rows - 1) * pad_pitch) / 2)
 
-        array = BGAPadGridArray(pad, cols, rows, pad_pitch, pad_pitch, pin1Pos)
+        array = BGAPadGridArray(pad, cols, rows, pad_pitch, pad_pitch)
         array.AddPadsToModule()
 
         #box

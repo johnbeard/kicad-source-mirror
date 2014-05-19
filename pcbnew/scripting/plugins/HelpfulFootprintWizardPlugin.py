@@ -101,7 +101,7 @@ class FootprintWizardParameterManager:
 
     def _ParametersHaveErrors(self):
         """
-        Return true if we discovered errors suring parameter processing
+        Return true if we discovered errors during parameter processing
         """
 
         for name, section in self.parameter_errors.iteritems():
@@ -234,10 +234,12 @@ class HelpfulFootprintWizardPlugin(pcbnew.FootprintWizardPlugin,
         the implmenting class
         """
 
+        self.module = pcbnew.MODULE(None) # create a new module
+        # do it first, so if we return early, we don't segfault KiCad
+
+
         if not self.ProcessParameters():
             return
-
-        self.module = pcbnew.MODULE(None) # create a new module
 
         self.draw = FootprintWizardDrawingAids.FootprintWizardDrawingAids(self.module)
 
@@ -248,3 +250,42 @@ class HelpfulFootprintWizardPlugin(pcbnew.FootprintWizardPlugin,
         self.module.SetFPID( fpid )
 
         self.BuildThisFootprint() # implementer's build function
+
+class ConnectorWizard(HelpfulFootprintWizardPlugin):
+
+    # connector options
+    SMD = "SMD"
+    VERT = "VERT"
+    RA = "RA"
+
+    def GenerateParameterList(self):
+        if self.HaveRaOption():
+            self.AddParam("Pads", "ra", self.uBool, False)
+
+        self.AddParam("Pads", "n", self.uNatural, 4)
+
+    def CheckParameters(self):
+        if (self.HaveRaOption()):
+            self.CheckParamBool("Pads", "*ra")
+
+        self.CheckParamPositiveInt("Pads", "*n")
+
+    def GetValuePrefix(self):
+        return "J"
+
+    def HaveRaOption(self):
+        return False;
+
+    def N(self):
+        return self.parameters["Pads"]["*n"]
+
+    def RightAngled(self):
+        return self.HaveRaOption() and self.parameters["Pads"]["*ra"]
+
+    def GetReference(self, partRef, n, var):
+        if self.RightAngled() and self.RA not in var:
+            var.append(self.RA)
+        elif self.HaveRaOption() and self.VERT not in var:
+            var.append(self.VERT)
+
+        return "%s_%dPIN_%s" % (partRef, n, "_".join(var))

@@ -29,7 +29,9 @@ class FootprintWizardDrawingAids:
         #drawing context defaults
         self.dc = {
             'layer': pcbnew.SILKSCREEN_N_FRONT,
-            'width': pcbnew.FromMM(0.2)
+            'width': pcbnew.FromMM(0.2),
+            'xscale': 1,
+            'yscale': 1,
         }
 
     def SetWidth(self, width):
@@ -38,16 +40,43 @@ class FootprintWizardDrawingAids:
     def SetLayer(self, layer):
         self.dc['layer'] = layer
 
+    def SetXScale(self, xscale):
+        self.dc['xscale'] = xscale;
+
+    def SetYScale(self, yscale):
+        self.dc['yscale'] = yscale;
+
+    def ResetScale(self):
+        self.dc['xscale'] = 1
+        self.dc['yscale'] = 1
+
     def Line(self, x1, y1, x2, y2):
 
         outline = pcbnew.EDGE_MODULE(self.module)
         outline.SetWidth(self.dc['width'])
         outline.SetLayer(self.dc['layer'])
         outline.SetShape(pcbnew.S_SEGMENT)
-        start = pcbnew.wxPoint(x1, y1)
-        end = pcbnew.wxPoint(x2, y2)
+        start = pcbnew.wxPoint(self.dc['xscale'] * x1, self.dc['yscale'] * y1)
+        end = pcbnew.wxPoint(self.dc['xscale'] * x2, self.dc['yscale'] * y2)
         outline.SetStartEnd(start, end)
         self.module.Add(outline)
+
+    def Circle(self, x, y, r, filled=False):
+        circle = pcbnew.EDGE_MODULE(self.module)
+        start = pcbnew.wxPoint(x, y)
+
+        if filled:
+            circle.SetWidth(r)
+            end = pcbnew.wxPoint(x, y + r/2)
+        else:
+            circle.SetWidth(self.dc['width'])
+            end = pcbnew.wxPoint(x, y + r)
+
+        circle.SetLayer(self.dc['layer'])
+        circle.SetShape(pcbnew.S_CIRCLE)
+        circle.SetStartEnd(start, end)
+        self.module.Add(circle)
+
 
     # extends from (x1,y1) right
     def HLine(self, x, y, l):
