@@ -32,6 +32,7 @@ Examples include Molex PicoBlades and Harwin M40
 """
 
 from __future__ import division
+from math import copysign
 import pcbnew
 
 import HelpfulFootprintWizardPlugin as HFPW
@@ -42,83 +43,101 @@ class SMDInlineHeader(HFPW.ConnectorWizard):
 
     def GenerateParameterList(self):
         HFPW.ConnectorWizard.GenerateParameterList(self)
-
         self.AddParam("Pads", "hand soldering ext", self.uMM, 0);
+
+
+    def Rows(self):
+        return 1
+
+    def RowLength(self):
+        return abs(self.GetPitch()) * (self.N() - 1)
+
+    def HandSolderingExt(self):
+        return self.parameters["Pads"]["hand soldering ext"]
+
+    def TextSize(self):
+        return pcbnew.FromMM(0.8)
 
     def BuildThisFootprint(self):
 
-        pads = self.parameters["Pads"]
-
-        ext = pads["hand soldering ext"]
-
-        support_hsep, support_vsep = self.GetPadToSupportSep()
-        support_w, support_h = self.GetSupportSize()
         pad_w, pad_h = self.GetPadSize()
         pad_pitch = self.GetPitch()
 
-        pad_h += ext
-
-        # offset goes in the middle of the supports
-        if support_h and support_vsep:
-            pad_row_offset = (support_h + pad_h) / 2 + support_vsep
-        else:
-            pad_row_offset = 0
-
-        row_len = abs(pad_pitch) * (self.N() - 1)
+        pad_h += self.HandSolderingExt()
 
         # add in the pads
         pad = PA.PadMaker(self.module).SMDPad(pad_h, pad_w)
 
-        pos = pcbnew.wxPoint(0, -pad_row_offset)
+        for offset in self.GetPadRowOffsets():
+            off = offset + copysign(pad_h/2, offset)
 
-        pad = PA.PadMaker(self.module).SMDPad(pad_h, pad_w)
-        array = PA.PadLineArray(pad, self.N(), pad_pitch, False, pos)
-        array.AddPadsToModule()
+            pos = pcbnew.wxPoint(0, off)
 
-        #reference and value
-        textSize = pcbnew.FromMM(0.8)
-
-        # only smds have the support
-        if support_h and support_w:
-            support_pitch = row_len + 2 * support_hsep + support_w
-            pos = pcbnew.wxPoint(0, 0)
-            pad = PA.PadMaker(self.module).SMDPad(support_h, support_w)
-            array = PA.PadLineArray(pad, 2, support_pitch, False, pos, "")
+            pad = PA.PadMaker(self.module).SMDPad(pad_h, pad_w)
+            array = PA.PadLineArray(pad, self.N(), pad_pitch, False, pos)
             array.AddPadsToModule()
 
-            # now draw the silkscreen
-            lineOffset = pcbnew.FromMM(0.5)
-            angleLineTop = -pad_row_offset - pad_h/2 + ext
-            angleLineBottom = -support_h / 2 - lineOffset
-            angleLineInner = -(row_len + pad_w) / 2 - lineOffset
-            angleLineOuter = -(support_pitch + support_w) / 2
+        support_w, support_h = self.GetSupportSize()
+        pad_w, pad_h = self.GetPadSize()
 
-            pts = [[angleLineInner, angleLineTop],
-                    [angleLineInner, angleLineBottom],
-                    [angleLineOuter, angleLineBottom]]
+        support_pitch = self.RowLength() + 2 * self.GetSupportHSep() + support_w
 
-            self.draw.Polyline(pts)
-            self.draw.SetXScale(-1)
-            self.draw.Polyline(pts)
-            self.draw.ResetScale()
+        pos = pcbnew.wxPoint(0, 0)
+        pad = PA.PadMaker(self.module).SMDPad(support_h, support_w)
+        array = PA.PadLineArray(pad, 2, support_pitch, False, pos, "")
+        array.AddPadsToModule()
 
-            bottomLineY = support_h / 2 + lineOffset
-            bottomLineX = (support_pitch - support_w) / 2
+        self.AddDecoration()
 
-            pts = [[-bottomLineX, bottomLineY],
-                   [bottomLineX, bottomLineY]]
+    def AddDecoration(self):
+        # only smds have the support
+        if len(self.GetPadRowOffsets()) == 1: # we have a pair of supports
+            self.OpenTeeDecoration()
 
-            self.draw.Polyline(pts)
+    def OpenTeeDecoration(self):
 
-            circR = pcbnew.FromMM(0.3)
+        support_w, support_h = self.GetSupportSize()
+        pad_w, pad_h = self.GetPadSize()
 
-            self.draw.Circle(angleLineInner - circR * 2,
-                            angleLineBottom - circR * 2,
-                            circR, True)
+        support_pitch = self.RowLength() + 2 * self.GetSupportHSep() + support_w
 
-            self.draw.Value(-(angleLineInner + angleLineOuter) / 2,
-                             angleLineBottom - textSize, textSize)
-            self.draw.Reference(0, bottomLineY + textSize, textSize)
+        rowOffset = self.GetPadRowOffsets()[0]
+
+        # now draw the silkscreen
+        lineOffset = pcbnew.FromMM(0.5)
+        angleLineTop = rowOffset + copysign(pad_h, rowOffset)
+        angleLineBottom = -support_h / 2 - lineOffset
+        angleLineInner = -(self.RowLength() + pad_w) / 2 - lineOffset
+        angleLineOuter = -(support_pitch + support_w) / 2
+
+        pts = [[angleLineInner, angleLineTop],
+                [angleLineInner, angleLineBottom],
+                [angleLineOuter, angleLineBottom]]
+
+        self.draw.Polyline(pts)
+        self.draw.SetXScale(-1)
+        self.draw.Polyline(pts)
+        self.draw.ResetScale()
+
+        bottomLineY = support_h / 2 + lineOffset
+        bottomLineX = (support_pitch - support_w) / 2
+
+        pts = [[-bottomLineX, bottomLineY],
+               [bottomLineX, bottomLineY]]
+
+        self.draw.Polyline(pts)
+
+        circR = pcbnew.FromMM(0.3)
+
+        self.draw.Circle(angleLineInner - circR * 2,
+                        angleLineBottom - circR * 2,
+                        circR, True)
+
+        textSize = self.TextSize()
+
+        self.draw.Value(-(angleLineInner + angleLineOuter) / 2,
+                         angleLineBottom - textSize, textSize)
+        self.draw.Reference(0, bottomLineY + textSize, textSize)
 
 class MolexPicoBladeWizard(SMDInlineHeader):
 
@@ -161,8 +180,12 @@ class MolexPicoBladeWizard(SMDInlineHeader):
     def GetSupportSize(self):
         return pcbnew.FromMM(2.1), pcbnew.FromMM(3)
 
-    def GetPadToSupportSep(self):
-        return pcbnew.FromMM(3.6 - 2.1), pcbnew.FromMM(0.6)
+    def GetSupportHSep(self):
+        return pcbnew.FromMM(3.6 - 2.1)
+
+    def GetPadRowOffsets(self):
+        # centre of support to innner edge of
+        return [-pcbnew.FromMM(0.6 + 3/2)]
 
 MolexPicoBladeWizard().register()
 
@@ -207,14 +230,16 @@ class HarwinM40Wizard(SMDInlineHeader):
     def GetSupportSize(self):
         return pcbnew.FromMM(1.2), pcbnew.FromMM(1.8)
 
-    def GetPadToSupportSep(self):
-        hsep = pcbnew.FromMM(0.7)
+    def GetSupportHSep(self):
+        return pcbnew.FromMM(0.7)
+
+    def GetPadRowOffsets(self):
 
         if self.RightAngled():
-            vsep = pcbnew.FromMM(4 - 1.8)
+            vsep = pcbnew.FromMM(4 - 1.8/2)
         else:
-            vsep = pcbnew.FromMM(2.6 - 1.8)
+            vsep = pcbnew.FromMM(2.6 - 1.8/2)
 
-        return hsep, vsep
+        return [-vsep]
 
 HarwinM40Wizard().register()
