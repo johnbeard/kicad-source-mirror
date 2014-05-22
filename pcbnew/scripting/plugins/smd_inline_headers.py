@@ -190,8 +190,54 @@ class MolexPicoBladeWizard(SMDInlineHeader):
                                 pcbnew.FromMM(2.1), pcbnew.FromMM(3))
 
     def AddDecoration(self):
+
+        if self.RightAngled():
+            self.DrawRADecoration()
+        else:
+            self.DrawVertDecoration()
+
+    def DrawVertDecoration(self):
         rl = self.RowLength()
-        self.draw.Box(0, 0, rl + 2* fmm(1.5625), fmm(4.0625))
+
+        self.draw.Box(0, 0, rl + 2 * fmm(1.4), fmm(3.8))
+
+        self.draw.SetWidth(fmm(0.1))
+
+        self.DrawWings()
+
+        for n in range(self.N()):
+            self.DrawPinEnd(n * self.GetPitch() - rl/2, fmm(0.3),
+                            fmm(0.4), fmm(0.8))
+
+        pts = [ [0,                 fmm(1.5)],
+                [rl/2 + fmm(0.9),   fmm(1.5)],
+                [rl/2 + fmm(0.9),   fmm(0.725)],
+                [rl/2 + fmm(1.1),   fmm(0.725)],
+                [rl/2 + fmm(1.1),   fmm(0)],
+                [rl/2 + fmm(0.9),   fmm(0)],
+                [rl/2 + fmm(0.9),   -fmm(0.9)]]
+
+        pts2 = [ [rl/2 + fmm(1.4),  -fmm(0.9)],
+                [rl/2 + fmm(0.6),   -fmm(0.9)],
+                [rl/2 + fmm(0.6),   -fmm(1.4)],
+                [rl/2 + fmm(1.4),   -fmm(1.4)]]
+
+        self.draw.Polyline(pts)
+        self.draw.Polyline(pts2)
+
+        self.draw.SetXScale(-1)
+
+        self.draw.Polyline(pts)
+        self.draw.Polyline(pts2)
+
+        self.draw.ResetScale()
+
+        self.draw.Value(rl/2 + fmm(2.1), fmm(-2.8), self.TextSize())
+        self.draw.Reference(0, fmm(2.8), self.TextSize())
+
+    def DrawRADecoration(self):
+        rl = self.RowLength()
+        self.draw.Box(0, 0, rl + 2 * fmm(1.5625), fmm(4.0625))
 
         self.draw.SetWidth(fmm(0.1))
 
@@ -205,22 +251,14 @@ class MolexPicoBladeWizard(SMDInlineHeader):
         pts2 = [[rl/2 + fmm(0.9375), fmm(1.5625)],
                         [rl/2 + fmm(1.25), fmm(2)]]
 
-        wing = [[rl/2 + fmm(1.5625),    fmm(1.56250)],
-                [rl/2 + fmm(3.125),     fmm(1.56250)],
-                [rl/2 + fmm(3.125),     fmm(0.3125)],
-                [rl/2 + fmm(3.4375),    0],
-                [rl/2 + fmm(3.4375),    fmm(-1.25)],
-                [rl/2 + fmm(1.5625),    fmm(-1.25)]]
 
         self.draw.Polyline(pts)
         self.draw.Polyline(pts2)
-        self.draw.Polyline(wing)
 
         self.draw.SetXScale(-1)
 
         self.draw.Polyline(pts)
         self.draw.Polyline(pts2)
-        self.draw.Polyline(wing)
 
         self.draw.ResetScale()
 
@@ -229,9 +267,25 @@ class MolexPicoBladeWizard(SMDInlineHeader):
 
         self.draw.Circle(-rl/2 - fmm(1.5), fmm(-3), fmm(0.4), True)
 
+        self.DrawWings()
+
         self.draw.Value(rl/2 + fmm(2.1), fmm(-2.8), self.TextSize())
         self.draw.Reference(0, fmm(2.8), self.TextSize())
 
+    def DrawWings(self):
+        rl = self.RowLength()
+
+        wing = [[rl/2 + fmm(1.5625),    fmm(1.56250)],
+                [rl/2 + fmm(3.125),     fmm(1.56250)],
+                [rl/2 + fmm(3.125),     fmm(0.3125)],
+                [rl/2 + fmm(3.4375),    0],
+                [rl/2 + fmm(3.4375),    fmm(-1.25)],
+                [rl/2 + fmm(1.5625),    fmm(-1.25)]]
+
+        self.draw.Polyline(wing)
+        self.draw.SetXScale(-1)
+        self.draw.Polyline(wing)
+        self.draw.ResetScale()
 
     def DrawPinSide(self, x, y):
 
@@ -247,6 +301,36 @@ class MolexPicoBladeWizard(SMDInlineHeader):
 
         self.draw.Polyline(pts)
 
+    def DrawPinEnd(self, x, y, w, h):
+
+        z = min(w/2, h/2)
+
+        self.draw.Box(x, y, w, h)
+
+        if h > w:
+            self.draw.Line(x, y + h/2 - z,
+                           x, y - h/2 + z)
+
+            pts = [ [x - w/2, y - h/2],
+                    [x,       y - h/2 + z],
+                    [x + w/2, y - h/2]]
+
+            self.draw.Polyline(pts)
+
+            pts = [ [_[0], y - (_[1] - y)] for _ in pts]
+            self.draw.Polyline(pts)
+
+        else:
+            self.draw.Line(x - w/2 + z, y,
+                           x + w/2 - z, y)
+
+            pts = [ [x - w/2, y - h/2],
+                    [x - w/2 + z, y],
+                    [x - w/2, y + h/2]]
+
+            self.draw.Polyline(pts)
+            pts = [ [x - (_[0] - x), _[1]] for _ in pts]
+            self.draw.Polyline(pts)
 
 MolexPicoBladeWizard().register()
 
