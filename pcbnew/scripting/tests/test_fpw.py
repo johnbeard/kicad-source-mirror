@@ -16,8 +16,8 @@ class TestBoard():
 
         self.margin = FMM(30)
 
-        self.x = self.margin
-        self.y = self.margin
+        self.x = 0
+        self.y = 0
 
         self.xmax = 200
 
@@ -25,7 +25,7 @@ class TestBoard():
 
     def addModule(self, mod):
 
-        mod.SetPosition(pcbnew.wxPoint(self.x, self.y))
+        mod.SetPosition(pcbnew.wxPoint(self.margin + self.x, self.margin + self.y))
 
         #print mod.GetFootprintRect()
         #self.x += mod.GetBoundingBox().GetWidth() + self.xsep
@@ -57,18 +57,52 @@ tf = {True, False}
 
 params = list(itertools.product(tf, {0, FMM(1)}))
 
+"""
 for go in params:
     tb.testFP(SIH.MolexPicoBladeWizard(), {
         "*n": 5,
         "*ra": go[0],
         "hand soldering ext": go[1],
     })
+"""
 
+for n in range(2,16):
+    tb.testFP(SIH.MolexPicoBladeWizard(), {
+        "*n": n,
+        "*ra": False,
+        "*smd": True,
+        "hand soldering ext": 0,
+    })
+
+tb.y += FMM(12)
+tb.x = 0
+
+for n in range(2,16):
+    tb.testFP(SIH.MolexPicoBladeWizard(), {
+        "*n": n,
+        "*ra": True,
+        "*smd": True,
+        "hand soldering ext": 0,
+    })
+
+tb.y += FMM(12)
+tb.x = 0
+
+for n in range(2,16):
+    tb.testFP(SIH.MolexPicoBladeWizard(), {
+        "*n": n,
+        "*ra": False,
+        "*smd": False,
+        "hand soldering ext": 0,
+    })
+
+"""
 for go in params:
     tb.testFP(SIH.HarwinM40Wizard(), {
         "*n": 5,
         "*ra": go[0],
         "hand soldering ext": go[1],
     })
+"""
 
 tb.board.Save("/tmp/test.kicad_pcb", pcbnew.IO_MGR.KICAD)

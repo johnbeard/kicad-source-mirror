@@ -262,11 +262,17 @@ class ConnectorWizard(HelpfulFootprintWizardPlugin):
         if self.HaveRaOption():
             self.AddParam("Pads", "ra", self.uBool, False)
 
+        if (self.HaveSMDOption()):
+            self.AddParam("Pads", "smd", self.uBool, False)
+
         self.AddParam("Pads", "n", self.uNatural, 4)
 
     def CheckParameters(self):
         if (self.HaveRaOption()):
             self.CheckParamBool("Pads", "*ra")
+
+        if (self.HaveSMDOption()):
+            self.CheckParamBool("Pads", "*smd")
 
         self.CheckParamPositiveInt("Pads", "*n")
 
@@ -276,16 +282,34 @@ class ConnectorWizard(HelpfulFootprintWizardPlugin):
     def HaveRaOption(self):
         return False;
 
-    def N(self):
-        return self.parameters["Pads"]["*n"]
-
     def RightAngled(self):
         return self.HaveRaOption() and self.parameters["Pads"]["*ra"]
 
+    def HaveSMDOption(self):
+        return False;
+
+    def IsSMD(self):
+        return self.HaveSMDOption() and self.parameters["Pads"]["*smd"]
+
+    def CentrePadsVertically(self):
+        return self.IsSMD()
+
+    def N(self):
+        return self.parameters["Pads"]["*n"]
+
     def GetReference(self, partRef, n, var):
+
+        if self.IsSMD():
+            var.append(self.SMD)
+
         if self.RightAngled() and self.RA not in var:
             var.append(self.RA)
         elif self.HaveRaOption() and self.VERT not in var:
             var.append(self.VERT)
 
-        return "%s_%dPIN_%s" % (partRef, n, "_".join(var))
+        ref = "%s_%dPIN" % (partRef, n)
+
+        if len(var):
+            ref += "_%s" % "_".join(var)
+
+        return ref

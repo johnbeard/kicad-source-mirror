@@ -39,13 +39,18 @@ from pcbnew import FromMM as fmm
 import HelpfulFootprintWizardPlugin as HFPW
 import PadArray as PA
 
+dUP = 0
+dDOWN = 1
+dLEFT = 2
+dRIGHT = 3
 
 class SMDInlineHeader(HFPW.ConnectorWizard):
+
+
 
     def GenerateParameterList(self):
         HFPW.ConnectorWizard.GenerateParameterList(self)
         self.AddParam("Pads", "hand soldering ext", self.uMM, 0);
-
 
     def Rows(self):
         return 1
@@ -67,16 +72,26 @@ class SMDInlineHeader(HFPW.ConnectorWizard):
         pad_h += self.HandSolderingExt()
 
         # add in the pads
-        pad = PA.PadMaker(self.module).SMDPad(pad_h, pad_w)
-
-        for offset in self.GetPadRowOffsets():
-            off = offset + copysign(pad_h/2, offset)
-
-            pos = pcbnew.wxPoint(0, off)
-
+        print self.IsSMD()
+        if self.IsSMD():
             pad = PA.PadMaker(self.module).SMDPad(pad_h, pad_w)
+        else:
+            pad = PA.PadMaker(self.module).THPad(pad_h, pad_w, fmm(0.5))
+
+        if not len(self.GetPadRowOffsets()):
+            pos = pcbnew.wxPoint(0, 0)
             array = PA.PadLineArray(pad, self.N(), pad_pitch, False, pos)
             array.AddPadsToModule()
+        else:
+            for offset in self.GetPadRowOffsets():
+                off = offset;
+
+                if self.CentrePadsVertically():
+                    off += copysign(pad_h/2, offset)
+
+                pos = pcbnew.wxPoint(0, off)
+                array = PA.PadLineArray(pad, self.N(), pad_pitch, False, pos)
+                array.AddPadsToModule()
 
         self.supports = self.GetSupports()
         if (self.supports):
@@ -84,6 +99,18 @@ class SMDInlineHeader(HFPW.ConnectorWizard):
 
 
         self.AddDecoration()
+
+
+    def DrawPin1Arrow(self, x, y, direction):
+
+        pts = [[x, y]]
+        if direction == dDOWN:
+            pts.append([x + fmm(0.5), y - fmm(0.5)])
+            pts.append([x - fmm(0.5), y - fmm(0.5)])
+
+        pts.append([x, y])
+
+        self.draw.Polyline(pts)
 
     def OpenTeeDecoration(self):
 
@@ -142,11 +169,13 @@ class DoubleSupport():
         array = PA.PadLineArray(pad, 2, self.pitch, False, pos, "")
         array.AddPadsToModule()
 
-
 class MolexPicoBladeWizard(SMDInlineHeader):
 
     def HaveRaOption(self):
-        return True;
+        return True
+
+    def HaveSMDOption(self):
+        return True
 
     def GetName(self):
         return "Molex PicoBlade"
@@ -156,14 +185,14 @@ class MolexPicoBladeWizard(SMDInlineHeader):
 
     def GetReference(self):
 
-        suffix = "71" # for SMDs
+        suffix = "71" if self.IsSMD() else "10" # for SMDs
 
-        var = [HFPW.ConnectorWizard.SMD]
+        var = []
 
         if self.RightAngled():
-            partNum = "53261"
+            partNum = "53261" if self.IsSMD() else "53048"
         else:
-            partNum = "53398"
+            partNum = "53398" if self.IsSMD() else "53047"
 
         ref = "MOLEX_%s-%02d%s" % (partNum, self.N(), suffix)
 
@@ -182,24 +211,37 @@ class MolexPicoBladeWizard(SMDInlineHeader):
         return pcbnew.FromMM(1.25)
 
     def GetPadRowOffsets(self):
-        # centre of support to innner edge of
-        return [-pcbnew.FromMM(0.6 + 3/2)]
+        if not self.IsSMD():
+            return [fmm(0.475)]
+
+        return [-fmm(0.6 + 3/2)]
 
     def GetSupports(self):
+        if not self.IsSMD():
+            return None
+
         return DoubleSupport(self, pcbnew.FromMM(3.6 - 2.1),
                                 pcbnew.FromMM(2.1), pcbnew.FromMM(3))
 
     def AddDecoration(self):
-
-        if self.RightAngled():
-            self.DrawRADecoration()
+        if self.IsSMD():
+            if self.RightAngled():
+                self.DrawRASMDDecoration()
+            else:
+                self.DrawVertSMDDecoration()
         else:
-            self.DrawVertDecoration()
+            if self.RightAngled():
+                self.DrawRASMDDecoration()
+            else:
+                self.DrawVertTHTDecoration()
 
-    def DrawVertDecoration(self):
+    def DrawPin1(self):
+        self.draw.Circle(-self.RowLength()/2 - fmm(1.5), fmm(-3), fmm(0.4), True)
+
+    def DrawVertSMDDecoration(self):
         rl = self.RowLength()
 
-        self.draw.Box(0, 0, rl + 2 * fmm(1.4), fmm(3.8))
+        self.draw.Box(0, 0, rl + 2 * fmm(1.3), fmm(3.8))
 
         self.draw.SetWidth(fmm(0.1))
 
@@ -217,10 +259,10 @@ class MolexPicoBladeWizard(SMDInlineHeader):
                 [rl/2 + fmm(0.9),   fmm(0)],
                 [rl/2 + fmm(0.9),   -fmm(0.9)]]
 
-        pts2 = [ [rl/2 + fmm(1.4),  -fmm(0.9)],
+        pts2 = [ [rl/2 + fmm(1.3),  -fmm(0.9)],
                 [rl/2 + fmm(0.6),   -fmm(0.9)],
                 [rl/2 + fmm(0.6),   -fmm(1.4)],
-                [rl/2 + fmm(1.4),   -fmm(1.4)]]
+                [rl/2 + fmm(1.3),   -fmm(1.4)]]
 
         self.draw.Polyline(pts)
         self.draw.Polyline(pts2)
@@ -235,9 +277,11 @@ class MolexPicoBladeWizard(SMDInlineHeader):
         self.draw.Value(rl/2 + fmm(2.1), fmm(-2.8), self.TextSize())
         self.draw.Reference(0, fmm(2.8), self.TextSize())
 
-    def DrawRADecoration(self):
+        self.DrawPin1();
+
+    def DrawRASMDDecoration(self):
         rl = self.RowLength()
-        self.draw.Box(0, 0, rl + 2 * fmm(1.5625), fmm(4.0625))
+        self.draw.Box(0, 0, rl + 2 * fmm(1.3), fmm(3.8))
 
         self.draw.SetWidth(fmm(0.1))
 
@@ -249,7 +293,7 @@ class MolexPicoBladeWizard(SMDInlineHeader):
                 [0,                     fmm(1.5625)]]
 
         pts2 = [[rl/2 + fmm(0.9375), fmm(1.5625)],
-                        [rl/2 + fmm(1.25), fmm(2)]]
+                        [rl/2 + fmm(1.25), fmm(1.8)]]
 
 
         self.draw.Polyline(pts)
@@ -265,22 +309,55 @@ class MolexPicoBladeWizard(SMDInlineHeader):
         for n in range(self.N()):
             self.DrawPinSide(n * self.GetPitch() - rl/2, -fmm(0.3125))
 
-        self.draw.Circle(-rl/2 - fmm(1.5), fmm(-3), fmm(0.4), True)
+        self.DrawPin1()
 
         self.DrawWings()
 
         self.draw.Value(rl/2 + fmm(2.1), fmm(-2.8), self.TextSize())
         self.draw.Reference(0, fmm(2.8), self.TextSize())
 
+    def DrawVertTHTDecoration(self):
+        rl = self.RowLength()
+
+        self.draw.Box(0, 0, rl + 2 * fmm(1.5), fmm(3.2))
+
+        self.draw.SetWidth(fmm(0.1))
+
+        pts = [ [0,                 fmm(1.2)],
+                [rl/2 + fmm(0.9),   fmm(1.2)],
+                [rl/2 + fmm(0.9),   fmm(0.4)],
+                [rl/2 + fmm(1.1),   fmm(0.4)],
+                [rl/2 + fmm(1.1),   -fmm(0.4)],
+                [rl/2 + fmm(0.9),   -fmm(0.4)],
+                [rl/2 + fmm(0.9),   -fmm(1.2)]]
+
+        pts2 = [ [-rl/2 - fmm(1.5),  -fmm(1.2)],
+                [rl/2 + fmm(1.5),   -fmm(1.2)]]
+
+        self.draw.Polyline(pts)
+        self.draw.Polyline(pts2)
+
+        self.draw.SetXScale(-1)
+
+        self.draw.Polyline(pts)
+
+        self.draw.ResetScale()
+
+        self.draw.Value(0, fmm(-2.8), self.TextSize())
+        self.draw.Reference(0, fmm(2.8), self.TextSize())
+
+        self.DrawPin1Arrow(-rl/2, -fmm(1.6), dDOWN);
+
+    def DrawRaTHTDecoration(self):
+        pass
+
     def DrawWings(self):
         rl = self.RowLength()
 
-        wing = [[rl/2 + fmm(1.5625),    fmm(1.56250)],
-                [rl/2 + fmm(3.125),     fmm(1.56250)],
-                [rl/2 + fmm(3.125),     fmm(0.3125)],
-                [rl/2 + fmm(3.4375),    0],
-                [rl/2 + fmm(3.4375),    fmm(-1.25)],
-                [rl/2 + fmm(1.5625),    fmm(-1.25)]]
+        wing = [[rl/2 + fmm(1.3),    fmm(1.6)],
+                [rl/2 + fmm(3.7),    fmm(1.6)],
+                [rl/2 + fmm(3.7),    fmm(-1.6)],
+                [rl/2 + fmm(1.3),    fmm(-1.6)]]
 
         self.draw.Polyline(wing)
         self.draw.SetXScale(-1)
@@ -334,6 +411,7 @@ class MolexPicoBladeWizard(SMDInlineHeader):
 
 MolexPicoBladeWizard().register()
 
+
 class HarwinM40Wizard(SMDInlineHeader):
 
     def HaveRaOption(self):
@@ -380,6 +458,9 @@ class HarwinM40Wizard(SMDInlineHeader):
         self.OpenTeeDecoration()
 
     def GetPadRowOffsets(self):
+
+        if not self.IsSMD():
+            return []
 
         if self.RightAngled():
             vsep = pcbnew.FromMM(4 - 1.8/2)
