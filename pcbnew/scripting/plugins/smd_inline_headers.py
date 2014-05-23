@@ -212,7 +212,7 @@ class MolexPicoBladeWizard(SMDInlineHeader):
 
     def GetPadRowOffsets(self):
         if not self.IsSMD():
-            return [fmm(0.475)]
+            return [-fmm(1.7)] if self.RightAngled() else [fmm(0.475)]
 
         return [-fmm(0.6 + 3/2)]
 
@@ -231,7 +231,7 @@ class MolexPicoBladeWizard(SMDInlineHeader):
                 self.DrawVertSMDDecoration()
         else:
             if self.RightAngled():
-                self.DrawRASMDDecoration()
+                self.DrawRATHTDecoration()
             else:
                 self.DrawVertTHTDecoration()
 
@@ -281,33 +281,13 @@ class MolexPicoBladeWizard(SMDInlineHeader):
 
     def DrawRASMDDecoration(self):
         rl = self.RowLength()
-        self.draw.Box(0, 0, rl + 2 * fmm(1.3), fmm(3.8))
+        body_width2 = rl/2 + fmm(1.3)
+        body_height = fmm(3.8)
+        self.draw.Box(0, 0, body_width2*2, body_height)
 
         self.draw.SetWidth(fmm(0.1))
 
-        pts = [ [0,                     fmm(-0.3125)],
-                [rl/2 + fmm(0.625),     fmm(-0.3125)],
-                [rl/2 + fmm(0.625),     fmm(0.9375)],
-                [rl/2 + fmm(0.9375),    fmm(0.9375)],
-                [rl/2 + fmm(0.9375),    fmm(1.5625)],
-                [0,                     fmm(1.5625)]]
-
-        pts2 = [[rl/2 + fmm(0.9375), fmm(1.5625)],
-                        [rl/2 + fmm(1.25), fmm(1.8)]]
-
-
-        self.draw.Polyline(pts)
-        self.draw.Polyline(pts2)
-
-        self.draw.SetXScale(-1)
-
-        self.draw.Polyline(pts)
-        self.draw.Polyline(pts2)
-
-        self.draw.ResetScale()
-
-        for n in range(self.N()):
-            self.DrawPinSide(n * self.GetPitch() - rl/2, -fmm(0.3125))
+        self.DrawRAPinOpening(body_height/2, body_width2)
 
         self.DrawPin1()
 
@@ -348,8 +328,56 @@ class MolexPicoBladeWizard(SMDInlineHeader):
 
         self.DrawPin1Arrow(-rl/2, -fmm(1.6), dDOWN);
 
-    def DrawRaTHTDecoration(self):
-        pass
+    def DrawRATHTDecoration(self):
+        rl = self.RowLength()
+
+        body_width2 = rl/2 + fmm(1.5)
+
+        pts = [ [0,                 fmm(2.75)],
+                [body_width2,       fmm(2.75)],
+                [body_width2,       -fmm(2.75)],
+                [rl/2 + fmm(0.8),   -fmm(2.75)],
+                [rl/2 + fmm(0.8),   -fmm(2)],
+                [0,                 -fmm(2)],
+            ]
+
+        self.draw.Polyline(pts)
+        self.draw.SetXScale(-1)
+        self.draw.Polyline(pts)
+        self.draw.ResetScale()
+
+        self.draw.SetWidth(fmm(0.1))
+
+        self.DrawRAPinOpening(fmm(2.75), body_width2)
+
+        self.draw.HLine(-rl/2 - fmm(1.5), -fmm(1.7), rl + fmm(3))
+
+        self.draw.Value(0, fmm(-3.5), self.TextSize())
+        self.draw.Reference(0, fmm(3.5), self.TextSize())
+
+        self.DrawPin1Arrow(-rl/2, -fmm(3), dDOWN);
+
+    def DrawRAPinOpening(self, ybottom, body_width2):
+        rl2 = self.RowLength()/2
+        pts = [ [0,                   ybottom - fmm(2.1)],
+                [rl2 + fmm(0.6),     ybottom - fmm(2.1)],
+                [rl2 + fmm(0.6),     ybottom - fmm(0.8)],
+                [rl2 + fmm(1),    ybottom - fmm(0.8)],
+                [rl2 + fmm(1),    ybottom - fmm(0.4)],
+                [0,                   ybottom - fmm(0.4)]]
+
+        pts2 = [[rl2 + fmm(1),    ybottom - fmm(0.4)],
+                [body_width2,      ybottom]]
+
+        self.draw.Polyline(pts)
+        self.draw.Polyline(pts2)
+        self.draw.SetXScale(-1)
+        self.draw.Polyline(pts)
+        self.draw.Polyline(pts2)
+        self.draw.ResetScale()
+
+        for n in range(self.N()):
+            self.DrawPinSide(n * self.GetPitch() - rl2, ybottom - fmm(2.1))
 
     def DrawWings(self):
         rl = self.RowLength()

@@ -96,6 +96,16 @@ for n in range(2,16):
         "hand soldering ext": 0,
     })
 
+tb.y += FMM(12)
+tb.x = 0
+
+for n in range(2,16):
+    tb.testFP(SIH.MolexPicoBladeWizard(), {
+        "*n": n,
+        "*ra": True,
+        "*smd": False,
+        "hand soldering ext": 0,
+    })
 """
 for go in params:
     tb.testFP(SIH.HarwinM40Wizard(), {
