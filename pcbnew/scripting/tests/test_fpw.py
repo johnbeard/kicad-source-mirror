@@ -19,9 +19,14 @@ class TestBoard():
         self.x = 0
         self.y = 0
 
-        self.xmax = 200
+        self.xmax = FMM(225)
 
         self.xsep = FMM(5)
+        self.ysep = FMM(10)
+
+    def newRow(self):
+        self.x = 0
+        self.y += self.ysep + FMM(4)
 
     def addModule(self, mod):
 
@@ -30,9 +35,13 @@ class TestBoard():
         #print mod.GetFootprintRect()
         #self.x += mod.GetBoundingBox().GetWidth() + self.xsep
 
-        self.x += FMM(25)
-
         self.board.Add(mod)
+
+        self.x += FMM(20) + self.xsep #todo get bounding box
+
+        if self.x > self.xmax:
+            self.x = 0
+            self.y += self.ysep
 
     def testFP(self, fp, params):
 
@@ -74,8 +83,7 @@ for n in range(2,16):
         "hand soldering ext": 0,
     })
 
-tb.y += FMM(12)
-tb.x = 0
+tb.newRow()
 
 for n in range(2,16):
     tb.testFP(SIH.MolexPicoBladeWizard(), {
@@ -85,8 +93,7 @@ for n in range(2,16):
         "hand soldering ext": 0,
     })
 
-tb.y += FMM(12)
-tb.x = 0
+tb.newRow()
 
 for n in range(2,16):
     tb.testFP(SIH.MolexPicoBladeWizard(), {
@@ -96,8 +103,7 @@ for n in range(2,16):
         "hand soldering ext": 0,
     })
 
-tb.y += FMM(12)
-tb.x = 0
+tb.newRow()
 
 for n in range(2,16):
     tb.testFP(SIH.MolexPicoBladeWizard(), {
@@ -106,6 +112,8 @@ for n in range(2,16):
         "*smd": False,
         "hand soldering ext": 0,
     })
+
+tb.newRow()
 """
 for go in params:
     tb.testFP(SIH.HarwinM40Wizard(), {

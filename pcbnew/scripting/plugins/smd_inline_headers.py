@@ -112,6 +112,9 @@ class SMDInlineHeader(HFPW.ConnectorWizard):
 
         self.draw.Polyline(pts)
 
+    def DrawPin1Circle(self, x, y):
+        self.draw.Circle(x, y, fmm(0.4), True)
+
     def OpenTeeDecoration(self):
 
         pad_w, pad_h = self.GetPadSize()
@@ -235,9 +238,6 @@ class MolexPicoBladeWizard(SMDInlineHeader):
             else:
                 self.DrawVertTHTDecoration()
 
-    def DrawPin1(self):
-        self.draw.Circle(-self.RowLength()/2 - fmm(1.5), fmm(-3), fmm(0.4), True)
-
     def DrawVertSMDDecoration(self):
         rl = self.RowLength()
 
@@ -277,7 +277,7 @@ class MolexPicoBladeWizard(SMDInlineHeader):
         self.draw.Value(rl/2 + fmm(2.1), fmm(-2.8), self.TextSize())
         self.draw.Reference(0, fmm(2.8), self.TextSize())
 
-        self.DrawPin1();
+        self.DrawPin1Circle(-self.RowLength()/2 - fmm(1.5), fmm(-3));
 
     def DrawRASMDDecoration(self):
         rl = self.RowLength()
@@ -289,7 +289,7 @@ class MolexPicoBladeWizard(SMDInlineHeader):
 
         self.DrawRAPinOpening(body_height/2, body_width2)
 
-        self.DrawPin1()
+        self.DrawPin1Circle(-self.RowLength()/2 - fmm(1.5), fmm(-3));
 
         self.DrawWings()
 
