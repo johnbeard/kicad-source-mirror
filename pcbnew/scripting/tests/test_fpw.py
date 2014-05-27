@@ -7,7 +7,7 @@ import itertools
 # hack to avoid futzing with pythonpaths for the test
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 
-import plugins.smd_inline_headers as SIH
+import plugins.molex_picoblade as MPB
 
 class TestBoard():
 
@@ -76,7 +76,7 @@ for go in params:
 """
 
 for n in range(2,16):
-    tb.testFP(SIH.MolexPicoBladeWizard(), {
+    tb.testFP(MPB.MolexPicoBladeWizard(), {
         "*n": n,
         "*ra": False,
         "*smd": True,
@@ -86,7 +86,7 @@ for n in range(2,16):
 tb.newRow()
 
 for n in range(2,16):
-    tb.testFP(SIH.MolexPicoBladeWizard(), {
+    tb.testFP(MPB.MolexPicoBladeWizard(), {
         "*n": n,
         "*ra": True,
         "*smd": True,
@@ -96,7 +96,7 @@ for n in range(2,16):
 tb.newRow()
 
 for n in range(2,16):
-    tb.testFP(SIH.MolexPicoBladeWizard(), {
+    tb.testFP(MPB.MolexPicoBladeWizard(), {
         "*n": n,
         "*ra": False,
         "*smd": False,
@@ -106,7 +106,7 @@ for n in range(2,16):
 tb.newRow()
 
 for n in range(2,16):
-    tb.testFP(SIH.MolexPicoBladeWizard(), {
+    tb.testFP(MPB.MolexPicoBladeWizard(), {
         "*n": n,
         "*ra": True,
         "*smd": False,

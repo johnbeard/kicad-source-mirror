@@ -24,6 +24,12 @@ class FootprintWizardDrawingAids:
     A "drawing context" is provided which can be used to set and retain
     settings such as line width and layer
     """
+
+    dUP = 0
+    dDOWN = 1
+    dLEFT = 2
+    dRIGHT = 3
+
     def __init__(self, module):
         self.module = module
         #drawing context defaults
