@@ -99,6 +99,24 @@ class FootprintWizardDrawingAids:
         for i in range(0, len(pts) - 1):
             self.Line(pts[i][0], pts[i][1], pts[i+1][0], pts[i+1][1])
 
+    def MirroredPolyline(self, pts, mirrorX=False, mirrorY=False):
+
+        self.Polyline(pts)
+
+        if mirrorX and not mirrorY:
+            self.SetXScale(-1)
+            self.Polyline(pts)
+        elif mirrorY and not mirrorX:
+            self.SetYScale(-1)
+            self.Polyline(pts)
+        elif mirrorX and mirrorY:
+            self.SetXScale(-1)
+            self.Polyline(pts)
+            self.SetYScale(-1)
+            self.Polyline(pts)
+
+        self.ResetScale()
+
     def Reference(self, x, y, size):
         """
         Draw the module's reference as the given point.

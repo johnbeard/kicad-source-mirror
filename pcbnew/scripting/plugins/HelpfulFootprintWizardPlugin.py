@@ -313,3 +313,18 @@ class ConnectorWizard(HelpfulFootprintWizardPlugin):
             ref += "_%s" % "_".join(var)
 
         return ref
+
+    def SetModuleDescription(self):
+        var = []
+        if self.RightAngled():
+            var.append("RA")
+
+        if self.IsSMD():
+            var.append("SMD")
+
+        s = "%s - %d pins" % (self.GetDescription(), self.N())
+
+        if var:
+            s += ", " + ", ".join(var)
+
+        self.module.SetDescription(s)

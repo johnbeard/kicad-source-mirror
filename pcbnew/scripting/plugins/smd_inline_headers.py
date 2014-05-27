@@ -46,8 +46,6 @@ dRIGHT = 3
 
 class SMDInlineHeader(HFPW.ConnectorWizard):
 
-
-
     def GenerateParameterList(self):
         HFPW.ConnectorWizard.GenerateParameterList(self)
         self.AddParam("Pads", "hand soldering ext", self.uMM, 0);
@@ -99,6 +97,8 @@ class SMDInlineHeader(HFPW.ConnectorWizard):
 
 
         self.AddDecoration()
+
+        self.SetModuleDescription()
 
 
     def DrawPin1Arrow(self, x, y, direction):
@@ -190,8 +190,6 @@ class MolexPicoBladeWizard(SMDInlineHeader):
 
         suffix = "71" if self.IsSMD() else "10" # for SMDs
 
-        var = []
-
         if self.RightAngled():
             partNum = "53261" if self.IsSMD() else "53048"
         else:
@@ -199,7 +197,7 @@ class MolexPicoBladeWizard(SMDInlineHeader):
 
         ref = "MOLEX_%s-%02d%s" % (partNum, self.N(), suffix)
 
-        return HFPW.ConnectorWizard.GetReference(self, ref, self.N(), var)
+        return HFPW.ConnectorWizard.GetReference(self, ref, self.N(), [])
 
     def GetPadSize(self):
         if self.RightAngled():
@@ -264,15 +262,8 @@ class MolexPicoBladeWizard(SMDInlineHeader):
                 [rl/2 + fmm(0.6),   -fmm(1.4)],
                 [rl/2 + fmm(1.3),   -fmm(1.4)]]
 
-        self.draw.Polyline(pts)
-        self.draw.Polyline(pts2)
-
-        self.draw.SetXScale(-1)
-
-        self.draw.Polyline(pts)
-        self.draw.Polyline(pts2)
-
-        self.draw.ResetScale()
+        self.draw.MirroredPolyline(pts, mirrorX=True)
+        self.draw.MirroredPolyline(pts2, mirrorX=True)
 
         self.draw.Value(rl/2 + fmm(2.1), fmm(-2.8), self.TextSize())
         self.draw.Reference(0, fmm(2.8), self.TextSize())
@@ -314,14 +305,8 @@ class MolexPicoBladeWizard(SMDInlineHeader):
         pts2 = [ [-rl/2 - fmm(1.5),  -fmm(1.2)],
                 [rl/2 + fmm(1.5),   -fmm(1.2)]]
 
-        self.draw.Polyline(pts)
+        self.draw.MirroredPolyline(pts, mirrorX=True)
         self.draw.Polyline(pts2)
-
-        self.draw.SetXScale(-1)
-
-        self.draw.Polyline(pts)
-
-        self.draw.ResetScale()
 
         self.draw.Value(0, fmm(-2.8), self.TextSize())
         self.draw.Reference(0, fmm(2.8), self.TextSize())
@@ -333,18 +318,14 @@ class MolexPicoBladeWizard(SMDInlineHeader):
 
         body_width2 = rl/2 + fmm(1.5)
 
-        pts = [ [0,                 fmm(2.75)],
-                [body_width2,       fmm(2.75)],
-                [body_width2,       -fmm(2.75)],
-                [rl/2 + fmm(0.8),   -fmm(2.75)],
-                [rl/2 + fmm(0.8),   -fmm(2)],
-                [0,                 -fmm(2)],
+        pts = [ [0,                         fmm(2.75)],
+                [body_width2,               fmm(2.75)],
+                [body_width2,               -fmm(2.75)],
+                [rl/2 + self.GetPitch()/2,  -fmm(2.75)],
+                [rl/2 + self.GetPitch()/2,  -fmm(1.8)]
             ]
 
-        self.draw.Polyline(pts)
-        self.draw.SetXScale(-1)
-        self.draw.Polyline(pts)
-        self.draw.ResetScale()
+        self.draw.MirroredPolyline(pts, mirrorX=True)
 
         self.draw.SetWidth(fmm(0.1))
 
@@ -353,12 +334,15 @@ class MolexPicoBladeWizard(SMDInlineHeader):
         self.draw.HLine(-rl/2 - fmm(1.5), -fmm(1.7), rl + fmm(3))
 
         self.draw.Value(0, fmm(-3.5), self.TextSize())
-        self.draw.Reference(0, fmm(3.5), self.TextSize())
+        self.draw.Reference(0, fmm(3.7), self.TextSize())
 
         self.DrawPin1Arrow(-rl/2, -fmm(3), dDOWN);
 
+        self.SawtoothLine(self.N(), self.GetPitch(), fmm(-1.7), fmm(-2.3), fmm(0.6), fmm(0.3))
+
     def DrawRAPinOpening(self, ybottom, body_width2):
         rl2 = self.RowLength()/2
+
         pts = [ [0,                   ybottom - fmm(2.1)],
                 [rl2 + fmm(0.6),     ybottom - fmm(2.1)],
                 [rl2 + fmm(0.6),     ybottom - fmm(0.8)],
@@ -369,15 +353,12 @@ class MolexPicoBladeWizard(SMDInlineHeader):
         pts2 = [[rl2 + fmm(1),    ybottom - fmm(0.4)],
                 [body_width2,      ybottom]]
 
-        self.draw.Polyline(pts)
-        self.draw.Polyline(pts2)
-        self.draw.SetXScale(-1)
-        self.draw.Polyline(pts)
-        self.draw.Polyline(pts2)
-        self.draw.ResetScale()
+        self.draw.MirroredPolyline(pts, mirrorX=True)
+        self.draw.MirroredPolyline(pts2, mirrorX=True)
 
         for n in range(self.N()):
-            self.DrawPinSide(n * self.GetPitch() - rl2, ybottom - fmm(2.1))
+            self.DrawPinSide(fmm(0.15), fmm(1.25), fmm(0.4),
+                    n * self.GetPitch() - rl2, ybottom - fmm(2.1))
 
     def DrawWings(self):
         rl = self.RowLength()
@@ -387,22 +368,15 @@ class MolexPicoBladeWizard(SMDInlineHeader):
                 [rl/2 + fmm(3.7),    fmm(-1.6)],
                 [rl/2 + fmm(1.3),    fmm(-1.6)]]
 
-        self.draw.Polyline(wing)
-        self.draw.SetXScale(-1)
-        self.draw.Polyline(wing)
-        self.draw.ResetScale()
+        self.draw.MirroredPolyline(wing, mirrorX=True)
 
-    def DrawPinSide(self, x, y):
+    def DrawPinSide(self, w, l, chamferLen, x, y):
 
-        width = fmm(0.15625)
-        length = fmm(1.25)
-        chamferLen = fmm(0.3125)
-
-        pts = [ [x - width,  y],
-                [x - width,  y + length - chamferLen],
-                [x,          y + length],
-                [x + width,  y + length - chamferLen],
-                [x + width,  y]]
+        pts = [ [x - w,  y],
+                [x - w,  y + l - chamferLen],
+                [x,      y + l],
+                [x + w,  y + l - chamferLen],
+                [x + w,  y]]
 
         self.draw.Polyline(pts)
 
@@ -435,6 +409,21 @@ class MolexPicoBladeWizard(SMDInlineHeader):
 
             self.draw.Polyline(pts)
             pts = [ [x - (_[0] - x), _[1]] for _ in pts]
+            self.draw.Polyline(pts)
+
+    def SawtoothLine(self, n, pitch, ybottom, ytop, wbottom, wtop):
+
+        for i in range(n):
+            cx = i * pitch - (n-1)*pitch/2
+
+            pts = [ [cx - pitch/2,          ytop],
+                    [cx - pitch/2 + wtop/2, ytop],
+                    [cx - wbottom/2,        ybottom],
+                    [cx + wbottom/2,        ybottom],
+                    [cx + pitch/2 - wtop/2, ytop],
+                    [cx + pitch/2,          ytop],
+                ]
+
             self.draw.Polyline(pts)
 
 MolexPicoBladeWizard().register()

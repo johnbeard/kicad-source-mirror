@@ -1,7 +1,7 @@
 import pcbnew
 from pcbnew import FromMM as FMM
 
-import os.path, sys
+import os, sys
 import itertools
 
 # hack to avoid futzing with pythonpaths for the test
@@ -123,4 +123,40 @@ for go in params:
     })
 """
 
-tb.board.Save("/tmp/test.kicad_pcb", pcbnew.IO_MGR.KICAD)
+filename = "/tmp/test.kicad_pcb"
+modPath = "/tmp/molex"
+
+if not os.path.isdir(modPath):
+    os.makedirs(modPath)
+
+tb.board.Save(filename, pcbnew.IO_MGR.KICAD)
+
+# hack to rip out modules from board
+brd = open(filename, 'r')
+
+mod = ''
+inMod = False
+
+for line in brd:
+    if line.startswith("  (module"):
+        inMod = True
+
+        ref = line.split()[1]
+        print ref
+
+    if inMod:
+        if not line.startswith("    (at "):
+            mod += line[2:]
+
+        if line.startswith("  )"):
+            inMod = False
+
+            modFile = os.path.join(modPath, "%s.%s" % (ref, "kicad_mod"))
+
+            f = open(modFile, 'w')
+            f.write(mod)
+            f.close()
+
+            mod = ''
+
+
