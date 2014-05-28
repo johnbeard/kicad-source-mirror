@@ -2,12 +2,14 @@ import pcbnew
 from pcbnew import FromMM as FMM
 
 import os, sys
+import re
 import itertools
 
 # hack to avoid futzing with pythonpaths for the test
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 
 import plugins.molex_picoblade as MPB
+import plugins.harwin_m40 as HM40
 
 class TestBoard():
 
@@ -114,14 +116,16 @@ for n in range(2,16):
     })
 
 tb.newRow()
-"""
-for go in params:
-    tb.testFP(SIH.HarwinM40Wizard(), {
-        "*n": 5,
-        "*ra": go[0],
-        "hand soldering ext": go[1],
+
+for n in range(2,16):
+    tb.testFP(HM40.HarwinM40Wizard(), {
+        "*n": n,
+        "*ra": True,
+        "*smd": True,
+        "hand soldering ext": 0,
     })
-"""
+
+tb.newRow()
 
 filename = "/tmp/test.kicad_pcb"
 modPath = "/tmp/molex"
@@ -141,12 +145,14 @@ for line in brd:
     if line.startswith("  (module"):
         inMod = True
 
+        line = re.sub(r"\(t(stamp|edit).*?\)", "", line)
+
         ref = line.split()[1]
         print ref
 
     if inMod:
         if not line.startswith("    (at "):
-            mod += line[2:]
+            mod += line[2:].rstrip() + "\n"
 
         if line.startswith("  )"):
             inMod = False

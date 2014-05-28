@@ -79,7 +79,7 @@ class MolexPicoBladeWizard(smd_inline_headers.SMDInlineHeader):
         self.DrawWings()
 
         for n in range(self.N()):
-            self.DrawPinEnd(n * self.GetPitch() - rl/2, fmm(0.3),
+            self.draw.DrawPinEnd(n * self.GetPitch() - rl/2, fmm(0.3),
                             fmm(0.4), fmm(0.8))
 
         pts = [ [0,                 fmm(1.5)],
@@ -171,7 +171,7 @@ class MolexPicoBladeWizard(smd_inline_headers.SMDInlineHeader):
 
         self.DrawPin1Arrow(-rl/2, -fmm(3), self.draw.dDOWN);
 
-        self.SawtoothLine(self.N(), self.GetPitch(), fmm(-1.7), fmm(-2.3), fmm(0.6), fmm(0.3))
+        self.draw.SawtoothLine(self.N(), self.GetPitch(), fmm(-1.7), fmm(-2.3), fmm(0.6), fmm(0.3))
 
     def DrawRAPinOpening(self, ybottom, body_width2):
         rl2 = self.RowLength()/2
@@ -190,7 +190,7 @@ class MolexPicoBladeWizard(smd_inline_headers.SMDInlineHeader):
         self.draw.MirroredPolyline(pts2, mirrorX=True)
 
         for n in range(self.N()):
-            self.DrawPinSide(fmm(0.15), fmm(1.25), fmm(0.4),
+            self.draw.DrawPinSide(fmm(0.15), fmm(1.25), fmm(0.4),
                     n * self.GetPitch() - rl2, ybottom - fmm(2.1))
 
     def DrawWings(self):
@@ -202,61 +202,5 @@ class MolexPicoBladeWizard(smd_inline_headers.SMDInlineHeader):
                 [rl/2 + fmm(1.3),    fmm(-1.6)]]
 
         self.draw.MirroredPolyline(wing, mirrorX=True)
-
-    def DrawPinSide(self, w, l, chamferLen, x, y):
-
-        pts = [ [x - w,  y],
-                [x - w,  y + l - chamferLen],
-                [x,      y + l],
-                [x + w,  y + l - chamferLen],
-                [x + w,  y]]
-
-        self.draw.Polyline(pts)
-
-    def DrawPinEnd(self, x, y, w, h):
-
-        z = min(w/2, h/2)
-
-        self.draw.Box(x, y, w, h)
-
-        if h > w:
-            self.draw.Line(x, y + h/2 - z,
-                           x, y - h/2 + z)
-
-            pts = [ [x - w/2, y - h/2],
-                    [x,       y - h/2 + z],
-                    [x + w/2, y - h/2]]
-
-            self.draw.Polyline(pts)
-
-            pts = [ [_[0], y - (_[1] - y)] for _ in pts]
-            self.draw.Polyline(pts)
-
-        else:
-            self.draw.Line(x - w/2 + z, y,
-                           x + w/2 - z, y)
-
-            pts = [ [x - w/2, y - h/2],
-                    [x - w/2 + z, y],
-                    [x - w/2, y + h/2]]
-
-            self.draw.Polyline(pts)
-            pts = [ [x - (_[0] - x), _[1]] for _ in pts]
-            self.draw.Polyline(pts)
-
-    def SawtoothLine(self, n, pitch, ybottom, ytop, wbottom, wtop):
-
-        for i in range(n):
-            cx = i * pitch - (n-1)*pitch/2
-
-            pts = [ [cx - pitch/2,          ytop],
-                    [cx - pitch/2 + wtop/2, ytop],
-                    [cx - wbottom/2,        ybottom],
-                    [cx + wbottom/2,        ybottom],
-                    [cx + pitch/2 - wtop/2, ytop],
-                    [cx + pitch/2,          ytop],
-                ]
-
-            self.draw.Polyline(pts)
 
 MolexPicoBladeWizard().register()
