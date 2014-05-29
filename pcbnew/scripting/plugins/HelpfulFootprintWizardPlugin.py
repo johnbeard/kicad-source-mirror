@@ -292,7 +292,11 @@ class ConnectorWizard(HelpfulFootprintWizardPlugin):
         return self.HaveSMDOption() and self.parameters["Pads"]["*smd"]
 
     def CentrePadsVertically(self):
-        return self.IsSMD()
+    """
+    Very often, SMD components are specced to the edge of the pads,
+    THT to the centre of the hole
+    """
+        return not self.IsSMD()
 
     def N(self):
         return self.parameters["Pads"]["*n"]

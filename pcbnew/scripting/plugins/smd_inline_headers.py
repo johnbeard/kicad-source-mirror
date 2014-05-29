@@ -79,7 +79,7 @@ class SMDInlineHeader(HFPW.ConnectorWizard):
             for offset in self.GetPadRowOffsets():
                 off = offset;
 
-                if self.CentrePadsVertically():
+                if not self.CentrePadsVertically():
                     off += copysign(pad_h/2, offset)
 
                 pos = pcbnew.wxPoint(0, off)

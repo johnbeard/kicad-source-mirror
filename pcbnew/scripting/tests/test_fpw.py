@@ -125,6 +125,7 @@ for n in range(2,16):
         "hand soldering ext": 0,
     })
 
+
 tb.newRow()
 
 filename = "/tmp/test.kicad_pcb"
