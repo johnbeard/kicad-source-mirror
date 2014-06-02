@@ -255,7 +255,7 @@ class ConnectorWizard(HelpfulFootprintWizardPlugin):
 
     # connector options
     SMD = "SMD"
-    VERT = "VERT"
+    VERT = "Vert"
     RA = "RA"
 
     def GenerateParameterList(self):
@@ -292,10 +292,10 @@ class ConnectorWizard(HelpfulFootprintWizardPlugin):
         return self.HaveSMDOption() and self.parameters["Pads"]["*smd"]
 
     def CentrePadsVertically(self):
-    """
-    Very often, SMD components are specced to the edge of the pads,
-    THT to the centre of the hole
-    """
+        """
+        Very often, SMD components are specced to the edge of the pads,
+        THT to the centre of the hole
+        """
         return not self.IsSMD()
 
     def N(self):
@@ -311,7 +311,7 @@ class ConnectorWizard(HelpfulFootprintWizardPlugin):
         elif self.HaveRaOption() and self.VERT not in var:
             var.append(self.VERT)
 
-        ref = "%s_%dPIN" % (partRef, n)
+        ref = "%s_%dPin" % (partRef, n)
 
         if len(var):
             ref += "_%s" % "_".join(var)

@@ -39,7 +39,7 @@ class TestBoard():
 
         self.board.Add(mod)
 
-        self.x += FMM(20) + self.xsep #todo get bounding box
+        self.x += FMM(25) + self.xsep #todo get bounding box
 
         if self.x > self.xmax:
             self.x = 0
@@ -61,6 +61,38 @@ class TestBoard():
         module = fp.GetModule()
 
         self.addModule(module)
+
+    def ripOutAndSaveModules(self, filename, modPath):
+        # hack to rip out modules from board
+        brd = open(filename, 'r')
+
+        mod = ''
+        inMod = False
+
+        for line in brd:
+            if line.startswith("  (module"):
+                inMod = True
+
+                line = re.sub(r"\(t(stamp|edit).*?\)", "", line)
+
+                ref = line.split()[1]
+                print ref
+
+            if inMod:
+                if not line.startswith("    (at "):
+                    mod += line[2:].rstrip() + "\n"
+
+                if line.startswith("  )"):
+                    inMod = False
+
+                    modFile = os.path.join(modPath, "%s.%s" % (ref, "kicad_mod"))
+
+                    f = open(modFile, 'w')
+                    f.write(mod)
+                    f.close()
+
+                    mod = ''
+
 
 tb = TestBoard()
 
@@ -136,34 +168,4 @@ if not os.path.isdir(modPath):
 
 tb.board.Save(filename, pcbnew.IO_MGR.KICAD)
 
-# hack to rip out modules from board
-brd = open(filename, 'r')
-
-mod = ''
-inMod = False
-
-for line in brd:
-    if line.startswith("  (module"):
-        inMod = True
-
-        line = re.sub(r"\(t(stamp|edit).*?\)", "", line)
-
-        ref = line.split()[1]
-        print ref
-
-    if inMod:
-        if not line.startswith("    (at "):
-            mod += line[2:].rstrip() + "\n"
-
-        if line.startswith("  )"):
-            inMod = False
-
-            modFile = os.path.join(modPath, "%s.%s" % (ref, "kicad_mod"))
-
-            f = open(modFile, 'w')
-            f.write(mod)
-            f.close()
-
-            mod = ''
-
-
+tb.ripOutAndSaveModules(filename, modPath)

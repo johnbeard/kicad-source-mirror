@@ -29,7 +29,7 @@ class MolexPicoBladeWizard(smd_inline_headers.SMDInlineHeader):
         else:
             partNum = "53398" if self.IsSMD() else "53047"
 
-        ref = "MOLEX_%s-%02d%s" % (partNum, self.N(), suffix)
+        ref = "Molex_PicoBlade_%s-%02d%s" % (partNum, self.N(), suffix)
 
         return HFPW.ConnectorWizard.GetReference(self, ref, self.N(), [])
 
