@@ -10,6 +10,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.par
 
 import plugins.molex_picoblade as MPB
 import plugins.harwin_m40 as HM40
+import plugins.smd_inline_headers as SIH
 
 class TestBoard():
 
@@ -110,7 +111,7 @@ for go in params:
 """
 
 for n in range(2,16):
-    tb.testFP(MPB.MolexPicoBladeWizard(), {
+    tb.testFP(SIH.NewMolexHeader(), {
         "*n": n,
         "*ra": False,
         "*smd": True,
@@ -120,7 +121,7 @@ for n in range(2,16):
 tb.newRow()
 
 for n in range(2,16):
-    tb.testFP(MPB.MolexPicoBladeWizard(), {
+    tb.testFP(SIH.NewMolexHeader(), {
         "*n": n,
         "*ra": True,
         "*smd": True,

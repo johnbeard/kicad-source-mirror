@@ -70,6 +70,7 @@ class MolexPicoBladeWizard(smd_inline_headers.SMDInlineHeader):
             else:
                 self.DrawVertTHTDecoration()
 
+        """
     def DrawVertSMDDecoration(self):
         rl = self.RowLength()
 
@@ -103,6 +104,7 @@ class MolexPicoBladeWizard(smd_inline_headers.SMDInlineHeader):
         self.draw.Reference(0, fmm(2.8), self.TextSize())
 
         self.DrawPin1Circle(-self.RowLength()/2 - fmm(1.5), fmm(-3));
+        """
 
     def DrawRASMDDecoration(self):
         rl = self.RowLength()

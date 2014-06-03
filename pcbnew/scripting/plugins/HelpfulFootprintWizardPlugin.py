@@ -267,6 +267,8 @@ class ConnectorWizard(HelpfulFootprintWizardPlugin):
 
         self.AddParam("Pads", "n", self.uNatural, 4)
 
+        self.AddParam("Pads", "hand soldering ext", self.uMM, 0);
+
     def CheckParameters(self):
         if (self.HaveRaOption()):
             self.CheckParamBool("Pads", "*ra")
@@ -284,6 +286,9 @@ class ConnectorWizard(HelpfulFootprintWizardPlugin):
 
     def RightAngled(self):
         return self.HaveRaOption() and self.parameters["Pads"]["*ra"]
+
+    def HandSolderingExt(self):
+        return self.parameters["Pads"]["hand soldering ext"]
 
     def HaveSMDOption(self):
         return False;

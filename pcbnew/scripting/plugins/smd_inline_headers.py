@@ -45,14 +45,14 @@ class SMDInlineHeader(HFPW.ConnectorWizard):
         HFPW.ConnectorWizard.GenerateParameterList(self)
         self.AddParam("Pads", "hand soldering ext", self.uMM, 0);
 
+    def HandSolderingExt(self):
+        return self.parameters["Pads"]["hand soldering ext"]
+
     def Rows(self):
         return 1
 
     def RowLength(self):
         return abs(self.GetPitch()) * (self.N() - 1)
-
-    def HandSolderingExt(self):
-        return self.parameters["Pads"]["hand soldering ext"]
 
     def TextSize(self):
         return pcbnew.FromMM(0.8)
@@ -129,10 +129,7 @@ class SMDInlineHeader(HFPW.ConnectorWizard):
                 [angleLineInner, angleLineBottom],
                 [angleLineOuter, angleLineBottom]]
 
-        self.draw.Polyline(pts)
-        self.draw.SetXScale(-1)
-        self.draw.Polyline(pts)
-        self.draw.ResetScale()
+        self.draw.MirroredPolyline(pts, mirrorX=True)
 
         bottomLineY = self.supports.h / 2 + lineOffset
         bottomLineX = (support_pitch - self.supports.w) / 2
@@ -147,6 +144,20 @@ class SMDInlineHeader(HFPW.ConnectorWizard):
         self.draw.Circle(angleLineInner - circR * 2,
                         angleLineBottom - circR * 2,
                         circR, True)
+
+    def DrawVertSMDDecoration(self):
+        pad_w, pad_h = self.GetPadSize()
+
+        support_pitch = self.RowLength() + 2 * self.supports.hsep + self.supports.w
+
+        rowOffset = self.GetPadRowOffsets()[0]
+
+        # now draw the silkscreen
+        lineOffset = pcbnew.FromMM(0.5)
+        angleLineTop = rowOffset + copysign(pad_h, rowOffset)
+        angleLineBottom = -self.supports.h / 2 - lineOffset
+        angleLineInner = -(self.RowLength() + pad_w) / 2 - lineOffset
+        angleLineOuter = -(support_pitch + self.supports.w) / 2
 
 class DoubleSupport():
 
@@ -166,3 +177,90 @@ class DoubleSupport():
         pad = PA.PadMaker(self.conn.module).SMDPad(self.h, self.w)
         array = PA.PadLineArray(pad, 2, self.pitch, False, pos, "")
         array.AddPadsToModule()
+
+class NewMolexHeader(HFPW.ConnectorWizard):
+
+    def HaveRaOption(self):
+        return True
+
+    def GetName(self):
+        return "Molex PicoBlade"
+
+    def GetDescription(self):
+        return "Molex PicoBlade 1.25mm header"
+
+    def GetReference(self):
+
+        suffix = "71" if self.IsSMD() else "10" # for SMDs
+
+        if self.RightAngled():
+            partNum = "53261" if self.IsSMD() else "53048"
+        else:
+            partNum = "53398" if self.IsSMD() else "53047"
+
+        ref = "Connector_Molex_PicoBlade_%s-%02d%s" % (partNum, self.N(), suffix)
+
+        return HFPW.ConnectorWizard.GetReference(self, ref, self.N(), [])
+
+    def BuildThisFootprint(self):
+
+        prm = self.GetComponentParams();
+
+        row_length = (self.N() - 1) * prm['P']
+
+        pad_h = prm['B'] + self.HandSolderingExt()
+
+        pad = PA.PadMaker(self.module).SMDPad(pad_h, prm['A'])
+
+
+        off = -prm['D'] / 2 - prm['E'] - pad_h / 2;
+
+        pos = pcbnew.wxPoint(0, off)
+        array = PA.PadLineArray(pad, self.N(), prm['P'], False, pos)
+        array.AddPadsToModule()
+
+        # supports
+        support_pitch = row_length + 2 * prm['F'] + prm['C']
+
+        pos = pcbnew.wxPoint(0, 0)
+        pad = PA.PadMaker(self.module).SMDPad(prm['D'], prm['C'])
+        array = PA.PadLineArray(pad, 2, support_pitch, False, pos, "")
+        array.AddPadsToModule()
+
+        # silk line
+
+        innerVerticalX = -row_length/2 - prm['A']/2 - fmm(0.5)
+        outerVerticalX = -support_pitch/2 - prm['C']/2 - fmm(0.5)
+
+
+        pts = [ [innerVerticalX,   -prm['D'] / 2 - prm['E'] - pad_h],
+                [innerVerticalX,   -prm['D'] / 2 - fmm(0.5)],
+                [outerVerticalX,   -prm['D'] / 2 - fmm(0.5)],
+                [outerVerticalX,    prm['D'] / 2 + prm['H']],
+                [-outerVerticalX,   prm['D'] / 2 + prm['H']],
+                [-outerVerticalX,  -prm['D'] / 2 - fmm(0.5)],
+                [-outerVerticalX - fmm(1),  -prm['D'] / 2 - fmm(0.5)],
+              ]
+
+        self.draw.Polyline(pts)
+
+        TextSize = fmm(0.8)
+
+        #texts
+        self.draw.Value(row_length/2 + fmm(2.1), fmm(-2.8), TextSize)
+        self.draw.Reference(0, fmm(2.8), TextSize)
+
+
+    def GetComponentParams(self):
+
+        return {
+            'A': fmm(0.8),
+            'B': fmm(1.6) if self.RightAngled() else fmm(1.3),
+            'C' : fmm(2.1),
+            'D' : fmm(3),
+            'E' : fmm(0.6),
+            'F' : fmm(1.1),
+            'H' : fmm(0.4),
+            'P' : fmm(1.25),
+            }
+
