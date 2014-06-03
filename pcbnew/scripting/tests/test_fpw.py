@@ -111,20 +111,18 @@ for go in params:
 """
 
 for n in range(2,16):
-    tb.testFP(SIH.NewMolexHeader(), {
+    tb.testFP(SIH.NewMolexSmdHeader(), {
         "*n": n,
         "*ra": False,
-        "*smd": True,
         "hand soldering ext": 0,
     })
 
 tb.newRow()
 
 for n in range(2,16):
-    tb.testFP(SIH.NewMolexHeader(), {
+    tb.testFP(SIH.NewMolexSmdHeader(), {
         "*n": n,
         "*ra": True,
-        "*smd": True,
         "hand soldering ext": 0,
     })
 
@@ -141,10 +139,9 @@ for n in range(2,16):
 tb.newRow()
 
 for n in range(2,16):
-    tb.testFP(MPB.MolexPicoBladeWizard(), {
+    tb.testFP(SIH.NewMolexThtRaHeader(), {
         "*n": n,
         "*ra": True,
-        "*smd": False,
         "hand soldering ext": 0,
     })
 

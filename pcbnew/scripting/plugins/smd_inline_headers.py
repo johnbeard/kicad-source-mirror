@@ -178,35 +178,13 @@ class DoubleSupport():
         array = PA.PadLineArray(pad, 2, self.pitch, False, pos, "")
         array.AddPadsToModule()
 
-class NewMolexHeader(HFPW.ConnectorWizard):
-
-    def HaveRaOption(self):
-        return True
-
-    def GetName(self):
-        return "Molex PicoBlade"
-
-    def GetDescription(self):
-        return "Molex PicoBlade 1.25mm header"
-
-    def GetReference(self):
-
-        suffix = "71" if self.IsSMD() else "10" # for SMDs
-
-        if self.RightAngled():
-            partNum = "53261" if self.IsSMD() else "53048"
-        else:
-            partNum = "53398" if self.IsSMD() else "53047"
-
-        ref = "Connector_Molex_PicoBlade_%s-%02d%s" % (partNum, self.N(), suffix)
-
-        return HFPW.ConnectorWizard.GetReference(self, ref, self.N(), [])
+class SMDInlineHeaderWithWings(HFPW.ConnectorWizard):
 
     def BuildThisFootprint(self):
 
         prm = self.GetComponentParams();
 
-        row_length = (self.N() - 1) * prm['P']
+        row_length = (self.N() - 1) * prm['d']
 
         pad_h = prm['B'] + self.HandSolderingExt()
 
@@ -216,7 +194,7 @@ class NewMolexHeader(HFPW.ConnectorWizard):
         off = -prm['D'] / 2 - prm['E'] - pad_h / 2;
 
         pos = pcbnew.wxPoint(0, off)
-        array = PA.PadLineArray(pad, self.N(), prm['P'], False, pos)
+        array = PA.PadLineArray(pad, self.N(), prm['d'], False, pos)
         array.AddPadsToModule()
 
         # supports
@@ -250,6 +228,28 @@ class NewMolexHeader(HFPW.ConnectorWizard):
         self.draw.Value(row_length/2 + fmm(2.1), fmm(-2.8), TextSize)
         self.draw.Reference(0, fmm(2.8), TextSize)
 
+    def GetComponentParams(self):
+        raise NotImplementedError
+
+class NewMolexSmdHeader(SMDInlineHeaderWithWings):
+
+    def HaveRaOption(self):
+        return True
+
+    def GetName(self):
+        return "Molex PicoBlade"
+
+    def GetDescription(self):
+        return "Molex PicoBlade 1.25mm shrouded header"
+
+    def GetReference(self):
+
+        suffix = "71"
+        partNum = "53048" if self.RightAngled() else "53048"
+
+        ref = "Molex_PicoBlade_%s-%02d%s" % (partNum, self.N(), suffix)
+
+        return HFPW.ConnectorWizard.GetReference(self, ref, self.N(), [])
 
     def GetComponentParams(self):
 
@@ -261,6 +261,50 @@ class NewMolexHeader(HFPW.ConnectorWizard):
             'E' : fmm(0.6),
             'F' : fmm(1.1),
             'H' : fmm(0.4),
-            'P' : fmm(1.25),
+            'd' : fmm(1.25),
             }
 
+class ThtRaHeaderShrouded(HFPW.ConnectorWizard):
+
+    def BuildThisFootprint(self):
+        prm = self.GetComponentParams()
+
+        pad = PA.PadMaker(self.module).THPad(prm['B'], prm['B'], drill=prm['b'])
+
+        pos = pcbnew.wxPoint(0, 0)
+        array = PA.PadLineArray(pad, self.N(), prm['d'], False, pos)
+        array.AddPadsToModule()
+
+        TextSize = fmm(0.8)
+        self.draw.Value(0, fmm(-2.8), TextSize)
+        self.draw.Reference(0, fmm(2.8), TextSize)
+
+class NewMolexThtRaHeader(ThtRaHeaderShrouded):
+
+    def GetName(self):
+        return "Molex PicoBlade"
+
+    def GetDescription(self):
+        return "Molex PicoBlade 1.25mm shrouded header"
+
+    def GetReference(self):
+
+        suffix = "10"
+        partNum = "53398"
+
+        ref = "Molex_PicoBlade_%s-%02d%s" % (partNum, self.N(), suffix)
+
+        return HFPW.ConnectorWizard.GetReference(self, ref, self.N(), [])
+
+    def GetComponentParams(self):
+
+        return {
+            'L': fmm(5.5),
+            'L1': fmm(5.5 - 1.05),
+            'e' : 0,
+            'd' : fmm(1.25),
+            'b' : fmm(0.5),
+            'E' : fmm(3.5),
+            'D1' : fmm(1.5),
+            'B' : fmm(0.8)
+            }

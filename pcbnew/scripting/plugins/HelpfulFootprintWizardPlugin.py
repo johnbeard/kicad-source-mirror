@@ -316,7 +316,7 @@ class ConnectorWizard(HelpfulFootprintWizardPlugin):
         elif self.HaveRaOption() and self.VERT not in var:
             var.append(self.VERT)
 
-        ref = "%s_%dPin" % (partRef, n)
+        ref = "Connector_%s" % (partRef)
 
         if len(var):
             ref += "_%s" % "_".join(var)
