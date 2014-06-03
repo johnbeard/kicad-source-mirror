@@ -40,22 +40,22 @@ class PadMaker:
 class PadArray:
 
     def __init__(self, pinNames=None):
-        self.firstPad = 1
+        self.firstPadNum = 1
         self.pinNames = pinNames
 
     def SetFirstPadInArray(self, fpNum):
         self.firstPad = fpNum
 
     # HACK! pad should one day have its own clone method
-    def ClonePad(self):
+    def ClonePad(self, toClone):
 
-        pad = pcbnew.D_PAD(self.pad.GetParent())
+        pad = pcbnew.D_PAD(toClone.GetParent())
 
-        pad.SetSize(self.pad.GetSize())
-        pad.SetShape(self.pad.GetShape())
-        pad.SetAttribute(self.pad.GetAttribute())
-        pad.SetLayerMask(self.pad.GetLayerMask())
-        pad.SetDrillSize(self.pad.GetDrillSize())
+        pad.SetSize(toClone.GetSize())
+        pad.SetShape(toClone.GetShape())
+        pad.SetAttribute(toClone.GetAttribute())
+        pad.SetLayerMask(toClone.GetLayerMask())
+        pad.SetDrillSize(toClone.GetDrillSize())
 
         return pad
 
@@ -64,11 +64,12 @@ class PadArray:
 
 class PadGridArray(PadArray):
 
-    def __init__(self, pad, nx, ny, px, py, centre=pcbnew.wxPoint(0,0), pinNames=None):
+    def __init__(self, pad, nx, ny, px, py, centre=pcbnew.wxPoint(0,0), pinNames=None, firstPad=None):
         PadArray.__init__(self, pinNames)
         # this pad is more of a "context", we will use it as a source of
         # pad data, but not actually add it
         self.pad = pad
+        self.firstPad = firstPad
         self.nx = int(nx)
         self.ny = int(ny)
         self.px = px
@@ -90,7 +91,7 @@ class PadGridArray(PadArray):
 
     # right to left, top to bottom
     def NamingFunction(self, x, y):
-        return self.firstPad + (self.nx * y + x)
+        return self.firstPadNum + (self.nx * y + x)
 
     #relocate the pad and add it as many times as we need
     def AddPadsToModule(self):
@@ -107,9 +108,11 @@ class PadGridArray(PadArray):
 
                 pos = pcbnew.wxPoint(posX, posY)
 
+                pad = self.firstPad if (self.firstPad and x == 0 and y == 0) else self.pad
+
                 # THIS DOESN'T WORK yet!
                 #pad = self.pad.Clone()
-                pad = self.ClonePad()
+                pad = self.ClonePad(pad)
 
                 pad.SetPos0(pos)
                 pad.SetPosition(pos)
@@ -123,9 +126,9 @@ class PadGridArray(PadArray):
 
 class PadLineArray(PadGridArray):
 
-    def __init__(self, pad, n, pitch, isVertical, centre=pcbnew.wxPoint(0,0), pinNames=None):
+    def __init__(self, pad, n, pitch, isVertical, centre=pcbnew.wxPoint(0,0), pinNames=None, firstPad=None):
 
         if isVertical:
-            PadGridArray.__init__(self, pad, 1, n, 0, pitch, centre, pinNames)
+            PadGridArray.__init__(self, pad, 1, n, 0, pitch, centre, pinNames, firstPad)
         else:
-            PadGridArray.__init__(self, pad, n, 1, pitch, 0, centre, pinNames)
+            PadGridArray.__init__(self, pad, n, 1, pitch, 0, centre, pinNames, firstPad)

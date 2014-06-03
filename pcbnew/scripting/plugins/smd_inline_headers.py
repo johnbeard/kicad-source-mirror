@@ -270,14 +270,29 @@ class ThtRaHeaderShrouded(HFPW.ConnectorWizard):
         prm = self.GetComponentParams()
 
         pad = PA.PadMaker(self.module).THPad(prm['B'], prm['B'], drill=prm['b'])
+        firstPad = PA.PadMaker(self.module).THPad(prm['B'], prm['B'], drill=prm['b'], shape=pcbnew.PAD_RECT)
 
         pos = pcbnew.wxPoint(0, 0)
-        array = PA.PadLineArray(pad, self.N(), prm['d'], False, pos)
+        array = PA.PadLineArray(pad, self.N(), prm['d'], False, pos, firstPad=firstPad)
         array.AddPadsToModule()
 
+        row_length = (self.N() - 1) * prm['d']
+
+        # silk screen line
+        verticalX = row_length/2 + prm['D1']
+        topY = prm['L1'] - prm['L']
+
+        pts = [ [-verticalX,  -prm['B']],
+                [-verticalX,  prm['L1']],
+                [verticalX,   prm['L1']],
+                [verticalX,   prm['B']]
+              ]
+
+        self.draw.Polyline(pts)
+
         TextSize = fmm(0.8)
-        self.draw.Value(0, fmm(-2.8), TextSize)
-        self.draw.Reference(0, fmm(2.8), TextSize)
+        self.draw.Value(0, topY - TextSize, TextSize)
+        self.draw.Reference(0, prm['L1'] + TextSize, TextSize)
 
 class NewMolexThtRaHeader(ThtRaHeaderShrouded):
 
