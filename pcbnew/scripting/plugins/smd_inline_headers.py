@@ -323,3 +323,76 @@ class NewMolexThtRaHeader(ThtRaHeaderShrouded):
             'D1' : fmm(1.5),
             'B' : fmm(0.8)
             }
+
+class ThtVerticalHeader(HFPW.ConnectorWizard):
+
+    def BuildThisFootprint(self):
+        prm = self.GetComponentParams()
+
+        pad = PA.PadMaker(self.module).THPad(prm['B'], prm['B'], drill=prm['b'])
+        firstPad = PA.PadMaker(self.module).THPad(prm['B'], prm['B'], drill=prm['b'], shape=pcbnew.PAD_RECT)
+
+        pos = pcbnew.wxPoint(0, 0)
+        array = PA.PadLineArray(pad, self.N(), prm['d'], False, pos, firstPad=firstPad)
+        array.AddPadsToModule()
+
+        row_length = (self.N() - 1) * prm['d']
+
+        # silk screen line
+        verticalX = row_length/2 + prm['D1']
+        topY = prm['L1'] - prm['L']
+
+        pts = [ [-verticalX,  -prm['B']],
+                [-verticalX,  prm['L1']],
+                [verticalX,   prm['L1']],
+                [verticalX,   prm['B']]
+              ]
+
+        self.draw.Polyline(pts)
+
+        TextSize = fmm(0.8)
+        self.draw.Value(0, topY - TextSize, TextSize)
+        self.draw.Reference(0, prm['L1'] + TextSize, TextSize)
+
+    def GetComponentParams(self):
+
+        return {
+            'L': fmm(5.5),
+            'L1': fmm(5.5 - 1.05),
+            'e' : 0,
+            'd' : fmm(1.25),
+            'b' : fmm(0.5),
+            'E' : fmm(3.5),
+            'D1' : fmm(1.5),
+            'B' : fmm(0.8)
+            }
+
+class NewMolexThtVertHeader(ThtVerticalHeader):
+
+    def GetName(self):
+        return "Molex PicoBlade"
+
+    def GetDescription(self):
+        return "Molex PicoBlade 1.25mm shrouded header. Vertical."
+
+    def GetReference(self):
+
+        suffix = "10"
+        partNum = "53047"
+
+        ref = "Molex_PicoBlade_%s-%02d%s" % (partNum, self.N(), suffix)
+
+        return HFPW.ConnectorWizard.GetReference(self, ref, self.N(), [])
+
+    def GetComponentParams(self):
+
+        return {
+            'L': fmm(5.5),
+            'L1': fmm(5.5 - 1.05),
+            'e' : 0,
+            'd' : fmm(1.25),
+            'b' : fmm(0.5),
+            'E' : fmm(3.5),
+            'D1' : fmm(1.5),
+            'B' : fmm(0.8)
+            }
