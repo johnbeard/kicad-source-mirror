@@ -225,7 +225,22 @@ class HelpfulFootprintWizardPlugin(pcbnew.FootprintWizardPlugin,
     def GetImage(self):
         return ""
 
+    def SetModule3DModel(self)
+        """
+        Set a 3D model for the module
+
+        Default is to do nothing, you need to implement this if you have
+        a model to set
+        """
+        pass
+
     def BuildThisFootprint(self):
+        """
+        Draw the footprint.
+
+        This is specific to each footprint class, you need to implment
+        this to draw what you want
+        """
         raise NotImplementedError
 
     def BuildFootprint(self):
@@ -250,6 +265,8 @@ class HelpfulFootprintWizardPlugin(pcbnew.FootprintWizardPlugin,
         self.module.SetFPID( fpid )
 
         self.BuildThisFootprint() # implementer's build function
+
+        self.SetModule3DModel() #add a 3d module if specified
 
 class ConnectorWizard(HelpfulFootprintWizardPlugin):
 
@@ -303,23 +320,26 @@ class ConnectorWizard(HelpfulFootprintWizardPlugin):
         """
         return not self.IsSMD()
 
+    def Manufacturer(self):
+        return None
+
+    def PartRangeName(self):
+        return None
+
     def N(self):
         return self.parameters["Pads"]["*n"]
 
-    def GetReference(self, partRef, n, var):
+    def GetReference(self, partRef):
 
-        if self.IsSMD():
-            var.append(self.SMD)
+        ref = "Connector"
 
-        if self.RightAngled() and self.RA not in var:
-            var.append(self.RA)
-        elif self.HaveRaOption() and self.VERT not in var:
-            var.append(self.VERT)
+        if self.Manufacturer():
+            ref += "_" + self.Manufacturer()
 
-        ref = "Connector_%s" % (partRef)
+        if self.PartRangeName():
+            ref += "_" + self.PartRangeName()
 
-        if len(var):
-            ref += "_%s" % "_".join(var)
+        ref += "_" + partRef
 
         return ref
 

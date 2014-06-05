@@ -183,8 +183,8 @@ class FootprintWizardDrawingAids:
         self.Box(x, y, w, h)
 
         #diagonal corner
-        self.Line(x - w/2 + diagSetback, x - h/2, x - w/2,
-                x - h/2 + diagSetback)
+        self.Line(x - w/2 + diagSetback, y - h/2, x - w/2,
+                y - h/2 + diagSetback)
 
     def DrawPinSide(self, w, l, chamferLen, x, y):
 

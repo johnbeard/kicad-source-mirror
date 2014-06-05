@@ -10,7 +10,6 @@ sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.par
 
 import plugins.molex_picoblade as MPB
 import plugins.harwin_m40 as HM40
-import plugins.smd_inline_headers as SIH
 
 class TestBoard():
 
@@ -77,7 +76,6 @@ class TestBoard():
                 line = re.sub(r"\(t(stamp|edit).*?\)", "", line)
 
                 ref = line.split()[1]
-                print ref
 
             if inMod:
                 if not line.startswith("    (at "):
@@ -101,17 +99,8 @@ tf = {True, False}
 
 params = list(itertools.product(tf, {0, FMM(1)}))
 
-"""
-for go in params:
-    tb.testFP(SIH.MolexPicoBladeWizard(), {
-        "*n": 5,
-        "*ra": go[0],
-        "hand soldering ext": go[1],
-    })
-"""
-
 for n in range(2,16):
-    tb.testFP(SIH.NewMolexSmdHeader(), {
+    tb.testFP(MPB.MolexSmdHeader(), {
         "*n": n,
         "*ra": False,
         "hand soldering ext": 0,
@@ -120,7 +109,7 @@ for n in range(2,16):
 tb.newRow()
 
 for n in range(2,16):
-    tb.testFP(SIH.NewMolexSmdHeader(), {
+    tb.testFP(MPB.MolexSmdHeader(), {
         "*n": n,
         "*ra": True,
         "hand soldering ext": 0,
@@ -129,24 +118,22 @@ for n in range(2,16):
 tb.newRow()
 
 for n in range(2,16):
-    tb.testFP(MPB.MolexPicoBladeWizard(), {
+    tb.testFP(MPB.MolexThtVertHeader(), {
         "*n": n,
-        "*ra": False,
-        "*smd": False,
         "hand soldering ext": 0,
     })
 
 tb.newRow()
 
 for n in range(2,16):
-    tb.testFP(SIH.NewMolexThtRaHeader(), {
+    tb.testFP(MPB.MolexThtRaHeader(), {
         "*n": n,
-        "*ra": True,
         "hand soldering ext": 0,
     })
 
 tb.newRow()
 
+'''
 for n in range(2,16):
     tb.testFP(HM40.HarwinM40Wizard(), {
         "*n": n,
@@ -154,7 +141,7 @@ for n in range(2,16):
         "*smd": True,
         "hand soldering ext": 0,
     })
-
+'''
 
 tb.newRow()
 
