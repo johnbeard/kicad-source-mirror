@@ -11,6 +11,10 @@ sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.par
 import plugins.molex_picoblade as MPB
 import plugins.harwin_m40 as HM40
 
+import plugins.bga_wizard as BGA
+import plugins.qfp_wizard as QFP
+import plugins.sdip_wizard as SDIP
+
 class TestBoard():
 
     def __init__(self):
@@ -28,9 +32,13 @@ class TestBoard():
 
     def newRow(self):
         self.x = 0
-        self.y += self.ysep + FMM(4)
+        self.y += self.ysep + FMM(3)
 
     def addModule(self, mod):
+
+        if self.x > self.xmax:
+            self.x = 0
+            self.y += self.ysep
 
         mod.SetPosition(pcbnew.wxPoint(self.margin + self.x, self.margin + self.y))
 
@@ -39,11 +47,7 @@ class TestBoard():
 
         self.board.Add(mod)
 
-        self.x += FMM(25) + self.xsep #todo get bounding box
-
-        if self.x > self.xmax:
-            self.x = 0
-            self.y += self.ysep
+        self.x += FMM(30) + self.xsep #todo get bounding box
 
     def testFP(self, fp, params):
 
@@ -98,6 +102,43 @@ tb = TestBoard()
 tf = {True, False}
 
 params = list(itertools.product(tf, {0, FMM(1)}))
+
+
+tb.testFP(BGA.BGAWizard(), {
+        "pad pitch": FMM(1),
+        "pad size": FMM(0.5),
+        "*row count": 5,
+        "*column count": 5,
+        "outline x margin": FMM(1),
+        "outline y margin": FMM(1)
+    })
+
+tb.testFP(QFP.QFPWizard(), {
+        "*n": 64,
+        "pad pitch": FMM(0.5),
+        "pad width": FMM(0.25),
+        "pad length": FMM(1.5),
+        "vertical pitch": FMM(15),
+        "horizontal pitch": FMM(15),
+        "*oval": True,
+        "package width": FMM(14),
+        "package height": FMM(14)
+    })
+
+tb.testFP(SDIP.SDIPWizard(), {
+        "*n": 6,
+        "*silk screen inside": False,
+        "*row count": 2,
+        "pad pitch": FMM(2.54),
+        "pad width": FMM(1.5),
+        "pad length": FMM(3.8),
+        "row spacing": FMM(7.62),
+        "drill size" : FMM(1),
+        "outline x margin": FMM(0.5),
+        "outline y margin": FMM(1)
+    })
+
+tb.newRow()
 
 for n in range(2,16):
     tb.testFP(MPB.MolexSmdHeader(), {

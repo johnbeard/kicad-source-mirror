@@ -44,7 +44,7 @@ class PadArray:
         self.pinNames = pinNames
 
     def SetFirstPadInArray(self, fpNum):
-        self.firstPad = fpNum
+        self.firstPadNum = fpNum
 
     # HACK! pad should one day have its own clone method
     def ClonePad(self, toClone):
@@ -94,7 +94,7 @@ class PadGridArray(PadArray):
         return self.firstPadNum + (self.nx * y + x)
 
     #relocate the pad and add it as many times as we need
-    def AddPadsToModule(self):
+    def AddPadsToModule(self, dc):
 
         pin1posX = self.centre.x - self.px * (self.nx - 1) / 2
         pin1posY = self.centre.y - self.py * (self.ny - 1) / 2
@@ -106,7 +106,7 @@ class PadGridArray(PadArray):
             for y in range(self.ny):
                 posY = pin1posY + (self.py * y)
 
-                pos = pcbnew.wxPoint(posX, posY)
+                pos = dc.TransformPoint(posX, posY)
 
                 pad = self.firstPad if (self.firstPad and x == 0 and y == 0) else self.pad
 

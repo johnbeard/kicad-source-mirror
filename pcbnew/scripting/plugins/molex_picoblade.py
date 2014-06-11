@@ -14,19 +14,25 @@ class MolexPicoBlade():
     def PartRangeName(self):
         return "PicoBlade"
 
-class MolexThtVertHeader(MolexPicoBlade,
-                            smd_inline_headers.ThtVerticalHeader):
+    def GetDescription(self):
+        return "Molex PicoBlade 1.25mm shrouded header"
 
     def GetName(self):
         return "Molex PicoBlade"
 
-    def GetDescription(self):
-        return "Molex PicoBlade 1.25mm shrouded header. Vertical."
+class MolexThtVertHeader(MolexPicoBlade,
+                            smd_inline_headers.ThtVerticalHeader):
 
     def GetReference(self):
         ref = "53047-%02d10" % (self.N())
 
         return HFPW.ConnectorWizard.GetReference(self, ref)
+
+    def SetModule3DModel(self):
+        # TODO implement this properly when 3d can be used
+        path = "Connectors/conn_df13/df13-%dp-125dsa.wrl" % self.N()
+        rot = [0, 0, 180]
+        pos = [0, -0.0187, 0]
 
     def GetComponentParams(self):
 
@@ -45,12 +51,6 @@ class MolexThtVertHeader(MolexPicoBlade,
 
 class MolexThtRaHeader(MolexPicoBlade,
                        smd_inline_headers.ThtRaHeaderShrouded):
-
-    def GetName(self):
-        return "Molex PicoBlade"
-
-    def GetDescription(self):
-        return "Molex PicoBlade 1.25mm shrouded header"
 
     def GetReference(self):
         ref = "53048-%02d10" % (self.N())
@@ -75,18 +75,6 @@ class MolexSmdHeader(MolexPicoBlade,
 
     def HaveRaOption(self):
         return True
-
-    def GetName(self):
-        return "Molex PicoBlade"
-
-    def GetDescription(self):
-        desc = "Molex PicoBlade 1.25mm shrouded header."
-
-        desc += " " + "Right-angled" if self.RightAngled() else "Vertical" + "."
-
-        desc += " %d ways" % self.N()
-
-        return desc
 
     def GetReference(self):
         pn = "53261" if self.RightAngled() else "53398"

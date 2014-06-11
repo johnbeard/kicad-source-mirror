@@ -28,6 +28,9 @@ import PadArray as PA
 
 class SMDInlineHeaderWithWings(HFPW.ConnectorWizard):
 
+    def IsSMD(self):
+        return True
+
     def BuildThisFootprint(self):
 
         prm = self.GetComponentParams();
@@ -38,12 +41,11 @@ class SMDInlineHeaderWithWings(HFPW.ConnectorWizard):
 
         pad = PA.PadMaker(self.module).SMDPad(pad_h, prm['A'])
 
-
         off = -prm['D'] / 2 - prm['E'] - pad_h / 2;
 
         pos = pcbnew.wxPoint(0, off)
         array = PA.PadLineArray(pad, self.N(), prm['d'], False, pos)
-        array.AddPadsToModule()
+        array.AddPadsToModule(self.draw)
 
         # supports
         support_pitch = row_length + 2 * prm['F'] + prm['C']
@@ -51,15 +53,17 @@ class SMDInlineHeaderWithWings(HFPW.ConnectorWizard):
         pos = pcbnew.wxPoint(0, 0)
         pad = PA.PadMaker(self.module).SMDPad(prm['D'], prm['C'])
         array = PA.PadLineArray(pad, 2, support_pitch, False, pos, "")
-        array.AddPadsToModule()
+        array.AddPadsToModule(self.draw)
 
         # silk line
 
         innerVerticalX = -row_length/2 - prm['A']/2 - fmm(0.5)
         outerVerticalX = -support_pitch/2 - prm['C']/2 - fmm(0.5)
 
+        topY = -prm['D'] / 2 - prm['E'] - pad_h
 
-        pts = [ [innerVerticalX,   -prm['D'] / 2 - prm['E'] - pad_h],
+
+        pts = [ [innerVerticalX,   topY],
                 [innerVerticalX,   -prm['D'] / 2 - fmm(0.5)],
                 [outerVerticalX,   -prm['D'] / 2 - fmm(0.5)],
                 [outerVerticalX,    prm['D'] / 2 + prm['H']],
@@ -70,7 +74,44 @@ class SMDInlineHeaderWithWings(HFPW.ConnectorWizard):
 
         self.draw.Polyline(pts)
 
-        TextSize = fmm(0.8)
+        # marker arrow
+        self.draw.MarkerArrow(-row_length / 2, topY - fmm(0.5), direction=self.draw.dirS)
+
+        #assembly layer
+        self.draw.SetLayer(pcbnew.ADHESIVE_N_FRONT)
+
+        mainBodyX = row_length/2 + prm['F']
+        mainBodyTop = -prm['D']/2 - prm['E']
+        mainBodyBot = prm['D']/2 + prm['H']
+        pts = [ [-mainBodyX,    mainBodyTop],
+                [-mainBodyX,    mainBodyBot],
+                [ mainBodyX,    mainBodyBot],
+                [ mainBodyX,    mainBodyTop],
+                [-mainBodyX,    mainBodyTop]]
+
+        self.draw.Polyline(pts)
+
+        wingOuterX = mainBodyX + prm['C']
+
+        pts = [ [ mainBodyX,    -prm['D']/2],
+                [ wingOuterX,   -prm['D']/2],
+                [ wingOuterX,    prm['D']/2],
+                [ mainBodyX,     prm['D']/2] ]
+
+        self.draw.Polyline(pts, mirrorX=0)
+
+        #assembly layer - pin 1
+        pin1X = -row_length/2
+        pin1MarkSize = min(abs(-mainBodyX - pin1X), fmm(3)) #make sure we can fit horizontally
+        pin1MarkSize = min(pin1MarkSize, abs(0.5 * (mainBodyTop - mainBodyBot))) #and vertically
+
+        pts = [ [pin1X - pin1MarkSize,  mainBodyTop],
+                [pin1X,                 mainBodyTop + pin1MarkSize],
+                [pin1X + pin1MarkSize,  mainBodyTop]]
+
+        self.draw.Polyline(pts)
+
+        TextSize = fmm(1)
 
         #texts
         self.draw.Value(row_length/2 + fmm(2.1), fmm(-2.8), TextSize)
@@ -81,17 +122,22 @@ class SMDInlineHeaderWithWings(HFPW.ConnectorWizard):
 
 class ThtRaHeaderShrouded(HFPW.ConnectorWizard):
 
+    def IsRightAngled(self):
+        return True
+
     def BuildThisFootprint(self):
         prm = self.GetComponentParams()
+
+        row_length = (self.N() - 1) * prm['d']
+
+        self.draw.TransformTranslate(row_length/2, 0)
 
         pad = PA.PadMaker(self.module).THPad(prm['B'], prm['B'], drill=prm['b'])
         firstPad = PA.PadMaker(self.module).THPad(prm['B'], prm['B'], drill=prm['b'], shape=pcbnew.PAD_RECT)
 
         pos = pcbnew.wxPoint(0, 0)
         array = PA.PadLineArray(pad, self.N(), prm['d'], False, pos, firstPad=firstPad)
-        array.AddPadsToModule()
-
-        row_length = (self.N() - 1) * prm['d']
+        array.AddPadsToModule(self.draw)
 
         # silk screen line
         topY = -prm['E1']
@@ -106,16 +152,14 @@ class ThtRaHeaderShrouded(HFPW.ConnectorWizard):
 
         self.draw.Polyline(pts)
 
+        self.DrawPin1MarkerAndTexts(prm['E1'], prm['E2'], -row_length/2)
+
         self.draw.SetLayer(pcbnew.ADHESIVE_N_FRONT)
 
         bodyH = bottomY - topY
         setback = min(fmm(2), bodyH/2)
         self.draw.BoxWithDiagonalAtCorner(0, (bottomY + topY)/2, boxX*2,
                                             bodyH, setback)
-
-        TextSize = fmm(0.8)
-        self.draw.Value(0, topY - TextSize, TextSize)
-        self.draw.Reference(0, prm['E2'] + TextSize, TextSize)
 
         #origin to pin 1
         self.module.SetPosition(pcbnew.wxPoint(-row_length/2, fmm(4)))
@@ -127,43 +171,33 @@ class ThtVerticalHeader(HFPW.ConnectorWizard):
     def BuildThisFootprint(self):
         prm = self.GetComponentParams()
 
+        row_length = (self.N() - 1) * prm['d']
+
+        self.draw.TransformTranslate(row_length/2, 0)
+
         pad = PA.PadMaker(self.module).THPad(prm['B'], prm['B'], drill=prm['b'])
         firstPad = PA.PadMaker(self.module).THPad(prm['B'], prm['B'], drill=prm['b'], shape=pcbnew.PAD_RECT)
 
         pos = pcbnew.wxPoint(0, 0)
         array = PA.PadLineArray(pad, self.N(), prm['d'], False, pos, firstPad=firstPad)
-        array.AddPadsToModule()
-
-        row_length = (self.N() - 1) * prm['d']
+        array.AddPadsToModule(self.draw)
 
         # silk screen box
         topY = -prm['E1']
         bottomY = prm['E2']
-        boxX = row_length/2 + prm['D1']
+        boxW = row_length + 2 * prm['D1']
+        bodyH = bottomY - topY
+        bodyYMid = (topY + bottomY) / 2
 
-        cornerGap = fmm(1.5)
+        self.draw.BoxWithOpenCorner(0, bodyYMid, boxW, bodyH, flip=self.draw.flipY)
 
-        pts = [ [-boxX + cornerGap, topY],
-                [boxX,              topY],
-                [boxX,              bottomY],
-                [-boxX,             bottomY],
-                [-boxX,             topY + cornerGap]]
-
-        self.draw.Polyline(pts)
+        self.DrawPin1MarkerAndTexts(prm['E1'], prm['E2'], -row_length / 2)
 
         self.draw.SetLayer(pcbnew.ADHESIVE_N_FRONT)
 
-        bodyH = bottomY - topY
-        setback = min(fmm(2), bodyH/2)
-        self.draw.BoxWithDiagonalAtCorner(0, (bottomY + topY)/2, boxX*2,
-                                            bodyH, setback)
-
-        TextSize = fmm(0.8)
-        self.draw.Value(0, topY - TextSize, TextSize)
-        self.draw.Reference(0, prm['E2'] + TextSize, TextSize)
+        self.draw.BoxWithDiagonalAtCorner(0, bodyYMid, boxW, bodyH, flip=self.draw.flipY)
 
         #origin to pin 1
         self.module.SetPosition(pcbnew.wxPoint(-row_length/2, 0))
 
         self.SetModuleDescription()
-

@@ -15,6 +15,7 @@
 #
 
 import pcbnew
+import math
 import FootprintWizardDrawingAids
 
 class FootprintWizardParameterManager:
@@ -225,12 +226,14 @@ class HelpfulFootprintWizardPlugin(pcbnew.FootprintWizardPlugin,
     def GetImage(self):
         return ""
 
-    def SetModule3DModel(self)
+    def SetModule3DModel(self):
         """
         Set a 3D model for the module
 
         Default is to do nothing, you need to implement this if you have
         a model to set
+
+        FIXME: This doesn't seem to be enabled yet?
         """
         pass
 
@@ -343,17 +346,41 @@ class ConnectorWizard(HelpfulFootprintWizardPlugin):
 
         return ref
 
+    def GetWays(self):
+        return self.N()
+
     def SetModuleDescription(self):
         var = []
-        if self.RightAngled():
-            var.append("RA")
+
+        var.append("Right-angled" if self.RightAngled() else "Vertical")
 
         if self.IsSMD():
             var.append("SMD")
 
-        s = "%s - %d pins" % (self.GetDescription(), self.N())
+        s = "%s" % (self.GetDescription())
 
         if var:
-            s += ", " + ", ".join(var)
+            s += ". " + ", ".join(var)
+
+        s += ". %s ways" % self.GetWays()
 
         self.module.SetDescription(s)
+
+    def DrawPin1MarkerAndTexts(self, topMargin, bottomMargin, markerX):
+
+        valueOnTop = topMargin < bottomMargin
+
+        markerY = -topMargin if valueOnTop else bottomMargin
+        markerY += math.copysign(pcbnew.FromMM(0.5), markerY)
+
+        markerDir = self.draw.dirS if valueOnTop else self.draw.dirN
+
+        self.draw.MarkerArrow(markerX, markerY, direction=markerDir)
+
+        TextSize = pcbnew.FromMM(1)
+
+        topTextY = -topMargin - TextSize
+        bottomTextY = bottomMargin + TextSize
+
+        self.draw.Value(0, topTextY if valueOnTop else bottomTextY, TextSize)
+        self.draw.Reference(0, topTextY if not valueOnTop else bottomTextY, TextSize)

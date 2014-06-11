@@ -80,7 +80,7 @@ class BGAWizard(HFPW.HelpfulFootprintWizardPlugin):
                                  -((rows - 1) * pad_pitch) / 2)
 
         array = BGAPadGridArray(pad, cols, rows, pad_pitch, pad_pitch)
-        array.AddPadsToModule()
+        array.AddPadsToModule(self.draw)
 
         #box
         ssX = -pin1Pos.x + pads["outline x margin"]

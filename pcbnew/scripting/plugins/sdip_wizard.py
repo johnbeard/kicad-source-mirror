@@ -65,7 +65,7 @@ class RowedFootprint(HFPW.HelpfulFootprintWizardPlugin):
         pin1Pos = pcbnew.wxPoint(-((num_rows - 1) * row_pitch) / 2, -row_length / 2)
 
         array = RowedGridArray(pad, num_rows, pads_per_row, row_pitch, pad_pitch)
-        array.AddPadsToModule()
+        array.AddPadsToModule(self.draw)
 
         # draw the Silk Screen
 
