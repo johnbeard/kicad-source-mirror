@@ -47,7 +47,7 @@ class TestBoard():
 
         self.board.Add(mod)
 
-        self.x += FMM(30) + self.xsep #todo get bounding box
+        self.x += FMM(34) + self.xsep #todo get bounding box
 
     def testFP(self, fp, params):
 

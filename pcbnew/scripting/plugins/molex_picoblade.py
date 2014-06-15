@@ -23,10 +23,10 @@ class MolexPicoBlade():
 class MolexThtVertHeader(MolexPicoBlade,
                             smd_inline_headers.ThtVerticalHeader):
 
-    def GetReference(self):
+    def GetValue(self):
         ref = "53047-%02d10" % (self.N())
 
-        return HFPW.ConnectorWizard.GetReference(self, ref)
+        return HFPW.ConnectorWizard.GetValue(self, ref)
 
     def SetModule3DModel(self):
         # TODO implement this properly when 3d can be used
@@ -52,10 +52,10 @@ class MolexThtVertHeader(MolexPicoBlade,
 class MolexThtRaHeader(MolexPicoBlade,
                        smd_inline_headers.ThtRaHeaderShrouded):
 
-    def GetReference(self):
+    def GetValue(self):
         ref = "53048-%02d10" % (self.N())
 
-        return HFPW.ConnectorWizard.GetReference(self, ref)
+        return HFPW.ConnectorWizard.GetValue(self, ref)
 
     def GetComponentParams(self):
 
@@ -76,11 +76,11 @@ class MolexSmdHeader(MolexPicoBlade,
     def HaveRaOption(self):
         return True
 
-    def GetReference(self):
+    def GetValue(self):
         pn = "53261" if self.RightAngled() else "53398"
         ref = "%s-%02d71" % (pn, self.N())
 
-        return HFPW.ConnectorWizard.GetReference(self, ref)
+        return HFPW.ConnectorWizard.GetValue(self, ref)
 
 
     def GetComponentParams(self):

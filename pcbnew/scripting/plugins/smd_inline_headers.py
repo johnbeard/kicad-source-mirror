@@ -111,11 +111,12 @@ class SMDInlineHeaderWithWings(HFPW.ConnectorWizard):
 
         self.draw.Polyline(pts)
 
-        TextSize = fmm(1)
+        size = self.GetTextSize()
 
         #texts
-        self.draw.Value(row_length/2 + fmm(2.1), fmm(-2.8), TextSize)
-        self.draw.Reference(0, fmm(2.8), TextSize)
+        textY = prm['D']/2 + prm['E'] + size
+        self.draw.Reference(row_length/2 + prm['C'] + fmm(1), -textY, size)
+        self.draw.Value(0, textY, size)
 
         self.SetModuleDescription()
 
@@ -129,8 +130,6 @@ class ThtRaHeaderShrouded(HFPW.ConnectorWizard):
         prm = self.GetComponentParams()
 
         row_length = (self.N() - 1) * prm['d']
-
-        self.draw.TransformTranslate(row_length/2, 0)
 
         pad = PA.PadMaker(self.module).THPad(prm['B'], prm['B'], drill=prm['b'])
         firstPad = PA.PadMaker(self.module).THPad(prm['B'], prm['B'], drill=prm['b'], shape=pcbnew.PAD_RECT)
@@ -166,14 +165,14 @@ class ThtRaHeaderShrouded(HFPW.ConnectorWizard):
 
         self.SetModuleDescription()
 
+        self.module.MoveAnchorPosition(pcbnew.wxPoint(row_length/2, 0))
+
 class ThtVerticalHeader(HFPW.ConnectorWizard):
 
     def BuildThisFootprint(self):
         prm = self.GetComponentParams()
 
         row_length = (self.N() - 1) * prm['d']
-
-        self.draw.TransformTranslate(row_length/2, 0)
 
         pad = PA.PadMaker(self.module).THPad(prm['B'], prm['B'], drill=prm['b'])
         firstPad = PA.PadMaker(self.module).THPad(prm['B'], prm['B'], drill=prm['b'], shape=pcbnew.PAD_RECT)
@@ -198,6 +197,6 @@ class ThtVerticalHeader(HFPW.ConnectorWizard):
         self.draw.BoxWithDiagonalAtCorner(0, bodyYMid, boxW, bodyH, flip=self.draw.flipY)
 
         #origin to pin 1
-        self.module.SetPosition(pcbnew.wxPoint(-row_length/2, 0))
+        self.module.MoveAnchorPosition(pcbnew.wxPoint(row_length/2, 0))
 
         self.SetModuleDescription()

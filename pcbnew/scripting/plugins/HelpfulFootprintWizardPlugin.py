@@ -217,14 +217,27 @@ class HelpfulFootprintWizardPlugin(pcbnew.FootprintWizardPlugin,
         self.decription = self.GetDescription()
         self.image = self.GetImage()
 
-    def GetReference(self):
+    def GetValue(self):
         raise NotImplementedError
 
-    def GetValuePrefix(self):
+    def GetReferencePrefix(self):
         return "U" # footprints needing wizards of often ICs
 
     def GetImage(self):
         return ""
+
+    def GetTextSize(self):
+        """
+        IPC nominal
+        """
+        return pcbnew.FromMM(1.2)
+
+    def GetTextThickness(self):
+        """
+        Thicker than IPC guidelines (10% of text height = 0.12mm)
+        as 5 wires/mm is a common silk screen limitation
+        """
+        return pcbnew.FromMM(0.2)
 
     def SetModule3DModel(self):
         """
@@ -261,15 +274,20 @@ class HelpfulFootprintWizardPlugin(pcbnew.FootprintWizardPlugin,
 
         self.draw = FootprintWizardDrawingAids.FootprintWizardDrawingAids(self.module)
 
-        self.module.SetReference(self.GetReference())
-        self.module.SetValue("%s**" % self.GetValuePrefix())
+        self.module.SetValue(self.GetValue())
+        self.module.SetReference("%s**" % self.GetReferencePrefix())
 
-        fpid = pcbnew.FPID(self.module.GetReference())   #the name in library
+        fpid = pcbnew.FPID(self.module.GetValue())   #the name in library
         self.module.SetFPID( fpid )
 
         self.BuildThisFootprint() # implementer's build function
 
         self.SetModule3DModel() #add a 3d module if specified
+
+        thick = self.GetTextThickness()
+
+        self.module.Reference().SetThickness(thick)
+        self.module.Value().SetThickness(thick)
 
 class ConnectorWizard(HelpfulFootprintWizardPlugin):
 
@@ -298,7 +316,7 @@ class ConnectorWizard(HelpfulFootprintWizardPlugin):
 
         self.CheckParamPositiveInt("Pads", "*n")
 
-    def GetValuePrefix(self):
+    def GetReferencePrefix(self):
         return "J"
 
     def HaveRaOption(self):
@@ -316,13 +334,6 @@ class ConnectorWizard(HelpfulFootprintWizardPlugin):
     def IsSMD(self):
         return self.HaveSMDOption() and self.parameters["Pads"]["*smd"]
 
-    def CentrePadsVertically(self):
-        """
-        Very often, SMD components are specced to the edge of the pads,
-        THT to the centre of the hole
-        """
-        return not self.IsSMD()
-
     def Manufacturer(self):
         return None
 
@@ -332,7 +343,7 @@ class ConnectorWizard(HelpfulFootprintWizardPlugin):
     def N(self):
         return self.parameters["Pads"]["*n"]
 
-    def GetReference(self, partRef):
+    def GetValue(self, partRef):
 
         ref = "Connector"
 
@@ -368,19 +379,26 @@ class ConnectorWizard(HelpfulFootprintWizardPlugin):
 
     def DrawPin1MarkerAndTexts(self, topMargin, bottomMargin, markerX):
 
-        valueOnTop = topMargin < bottomMargin
+        refOnTop = topMargin < bottomMargin
 
-        markerY = -topMargin if valueOnTop else bottomMargin
-        markerY += math.copysign(pcbnew.FromMM(0.5), markerY)
+        markerOffset = pcbnew.FromMM(0.5)
+        markerY = -topMargin if refOnTop else bottomMargin
+        markerY += math.copysign(markerOffset, markerY)
 
-        markerDir = self.draw.dirS if valueOnTop else self.draw.dirN
+        markerDir = self.draw.dirS if refOnTop else self.draw.dirN
 
         self.draw.MarkerArrow(markerX, markerY, direction=markerDir)
 
-        TextSize = pcbnew.FromMM(1)
+        topTextY = -topMargin
+        bottomTextY = bottomMargin
 
-        topTextY = -topMargin - TextSize
-        bottomTextY = bottomMargin + TextSize
+        refY = topTextY if refOnTop else bottomTextY
+        valY = topTextY if not refOnTop else bottomTextY
 
-        self.draw.Value(0, topTextY if valueOnTop else bottomTextY, TextSize)
-        self.draw.Reference(0, topTextY if not valueOnTop else bottomTextY, TextSize)
+        size = self.GetTextSize()
+
+        refY += math.copysign(size, refY)
+        valY += math.copysign(size, valY)
+
+        self.draw.Reference(0, refY, size)
+        self.draw.Value(0, valY, size)

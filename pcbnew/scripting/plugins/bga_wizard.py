@@ -50,14 +50,14 @@ class BGAWizard(HFPW.HelpfulFootprintWizardPlugin):
         self.CheckParamPositiveInt("Pads", "*column count")
 
 
-    def GetReference(self):
+    def GetValue(self):
 
         pins = self.parameters["Pads"]["*row count"] * self.parameters["Pads"]["*column count"]
 
         return "BGA %d" % pins
 
 
-    def GetValuePrefix(self):
+    def GetReferencePrefix(self):
         return "U"
 
 

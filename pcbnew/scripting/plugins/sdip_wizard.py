@@ -110,7 +110,7 @@ class SDIPWizard(RowedFootprint):
         self.AddParam("Pads", "outline x margin", self.uMM, 0.5)
         self.AddParam("Pads", "outline y margin", self.uMM, 1)
 
-    def GetReference(self):
+    def GetValue(self):
 
         rows = self.parameters["Pads"]["*row count"]
 
@@ -168,7 +168,7 @@ class SOICWizard(RowedFootprint):
     def GetDescription(self):
         return "SOIC, MSOP, SSOP, TSSOP, etc, footprint wizard"
 
-    def GetReference(self):
+    def GetValue(self):
         return "%s %d" % ("SOIC", self.parameters["Pads"]["*n"])
 
     def GenerateParameterList(self):

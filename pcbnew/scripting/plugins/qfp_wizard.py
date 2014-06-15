@@ -28,7 +28,7 @@ class QFPWizard(HelpfulFootprintWizardPlugin.HelpfulFootprintWizardPlugin):
 
         self.CheckParamPositiveInt("Pads", "*n", is_multiple_of = 4)
 
-    def GetReference(self):
+    def GetValue(self):
         return "QFP %d" % self.parameters["Pads"]["*n"]
 
     def BuildThisFootprint(self):
