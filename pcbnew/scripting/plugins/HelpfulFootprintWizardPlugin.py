@@ -353,7 +353,7 @@ class ConnectorWizard(HelpfulFootprintWizardPlugin):
         if self.PartRangeName():
             ref += "_" + self.PartRangeName()
 
-        ref += "_" + partRef
+        ref += partRef
 
         return ref
 

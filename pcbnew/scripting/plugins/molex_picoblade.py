@@ -78,7 +78,7 @@ class MolexSmdHeader(MolexPicoBlade,
 
     def GetValue(self):
         pn = "53261" if self.RightAngled() else "53398"
-        ref = "%s-%02d71" % (pn, self.N())
+        ref = "_%s-%02d71" % (pn, self.N())
 
         return HFPW.ConnectorWizard.GetValue(self, ref)
 
@@ -91,7 +91,9 @@ class MolexSmdHeader(MolexPicoBlade,
             'C' : fmm(2.1),
             'D' : fmm(3),
             'E' : fmm(0.6),
-            'F' : fmm(1.1),
+            'F' : fmm(1.5),
+            'G' : fmm(1.5),
             'H' : fmm(0.4),
+            'J' : fmm(0.4),
             'd' : fmm(1.25),
             }

@@ -174,6 +174,24 @@ for n in range(2,16):
 
 tb.newRow()
 
+for n in range(2,6):
+    tb.testFP(HM40.HarwinM40SMDHeader(), {
+        "*n": n,
+        "*ra": False,
+        "hand soldering ext": 0,
+    })
+
+tb.newRow()
+
+for n in range(2,6):
+    tb.testFP(HM40.HarwinM40SMDHeader(), {
+        "*n": n,
+        "*ra": True,
+        "hand soldering ext": 0,
+    })
+
+tb.newRow()
+
 '''
 for n in range(2,16):
     tb.testFP(HM40.HarwinM40Wizard(), {
