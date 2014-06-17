@@ -4,7 +4,6 @@ import scipy as sp
 import pylab as plt
 import math
 
-
 def plotBezier(bez):
 
     #Setup the parameterisation
@@ -54,48 +53,6 @@ def pointOnBezier(bez, t):
 
     return x, y
 
-def findInflections(bz):
-
-    # coefficients from
-    # http://www.caffeineowl.com/graphics/2d/vectorial/cubic-inflexion.html
-    ax = bz[1][0] - bz[0][0]
-    ay = bz[1][1] - bz[0][1]
-
-    bx = bz[2][0] - bz[1][0] - ax
-    by = bz[2][1] - bz[1][1] - ay
-
-    cx = bz[3][0] - bz[2][0] - ax - 2*bx
-    cy = bz[3][1] - bz[2][1] - ay - 2*by
-
-    # now solve for t:
-    # ax*by - ay*bx + t(ax*cy - ay*cx) + t^2(bx*cy - by*cx) = 0
-
-    # quadratic coefficients of at^2 + bt + c = 0
-    qa = bx * cy - by * cx
-    qb = ax * cy - ay * cx
-    qc = ax * by - ay * bx
-
-    sol = solveQuadraticReal(qa,qb,qc)
-
-    return [x for x in sol if x > 0 and x < 1]
-
-def solveQuadraticReal(a,b,c):
-    dis = b * b - 4 * a * c
-
-    if a == 0 and b == 0:
-        sol = []
-    if a == 0:
-        sol = [-c / b]
-    elif dis == 0:
-        sol = [-b / (2 * a)]
-    elif dis < 0:
-        sol = []
-    else:
-        sol = [(-b - math.sqrt(dis))/ (2 * a),
-               (-b + math.sqrt(dis))/ (2 * a)]
-
-    return sorted(sol)
-
 def splitBezier(bez, t):
     """
     Split a bezier at t and return both halves
@@ -126,252 +83,308 @@ def splitBezier(bez, t):
     return [[(x1, y1), (x12, y12), (x123, y123), (x1234, y1234)],
             [(x1234,y1234),(x234,y234),(x34,y34),(x4,y4)]]
 
-def splitBezierAtInflections(bez):
+math.pi2 = math.pi/2
+straight_tolerance = 0.0001
+straight_distance_tolerance = 0.0001
+min_arc_radius = 0.1
+EMC_TOLERANCE_EQUAL = 0.00001
+biarc_max_split_depth = 4
+biarc_tolerance = 0.1
 
-    infl = findInflections(bez)
+def between(c,x,y):
+    return x-straight_tolerance<=c<=y+straight_tolerance or y-straight_tolerance<=c<=x+straight_tolerance
 
-    print infl
+################################################################################
+###     Point (x,y) operations
+################################################################################
+class P:
+    def __init__(self, x, y=None):
+        if y is not None:
+            self.x, self.y = float(x), float(y)
+        else:
+            self.x, self.y = float(x[0]), float(x[1])
 
-    if not len(infl):
-        curves = [bez]
+    def __add__(self, other):
+        return P(self.x + other.x, self.y + other.y)
+
+    def __sub__(self, other):
+        return P(self.x - other.x, self.y - other.y)
+
+    def __neg__(self):
+        return P(-self.x, -self.y)
+
+    def __mul__(self, other):
+        if isinstance(other, P):
+            return self.x * other.x + self.y * other.y
+        return P(self.x * other, self.y * other)
+
+    __rmul__ = __mul__
+
+    def __truediv__(self, other):
+        return P(self.x / other, self.y / other)
+
+    def mag(self):
+        return math.hypot(self.x, self.y)
+
+    def unit(self):
+        h = self.mag()
+        if h:
+            return self / h
+        else:
+            return P(0,0)
+
+    def dot(self, other):
+        return self.x * other.x + self.y * other.y
+    def rot(self, theta):
+        c = math.cos(theta)
+        s = math.sin(theta)
+        return P(self.x * c - self.y * s,  self.x * s + self.y * c)
+
+    def angle(self):
+        return math.atan2(self.y, self.x)
+
+    def __repr__(self):
+        return '%f,%f' % (self.x, self.y)
+
+    def ccw(self):
+        return P(-self.y,self.x)
+
+    def l2(self):
+        return self.x*self.x + self.y*self.y
+
+def csp_at_t(bez,t):
+    ax,bx,cx,dx = bez[0][0], bez[1][0], bez[2][0], bez[3][0]
+    ay,by,cy,dy = bez[0][1], bez[1][1], bez[2][1], bez[3][1]
+
+    x1, y1 = ax+(bx-ax)*t, ay+(by-ay)*t
+    x2, y2 = bx+(cx-bx)*t, by+(cy-by)*t
+    x3, y3 = cx+(dx-cx)*t, cy+(dy-cy)*t
+
+    x4,y4 = x1+(x2-x1)*t, y1+(y2-y1)*t
+    x5,y5 = x2+(x3-x2)*t, y2+(y3-y2)*t
+
+    x,y = x4+(x5-x4)*t, y4+(y5-y4)*t
+    return [x,y]
+
+def point_to_arc_distance(p, arc):
+    """
+    Distance calculation from point to arc
+    """
+    P0,P2,c,a = arc
+    dist = None
+    p = P(p)
+    r = (P0 - c).mag()
+
+    if r > 0:
+        i = c + (p - c).unit() * r
+        alpha = ((i-c).angle() - (P0-c).angle())
+        if a*alpha<0:
+            if alpha>0:
+                alpha = alpha-math.pi2
+            else:
+                alpha = math.pi2+alpha
+        if between(alpha,0,a) or min(abs(alpha),abs(alpha-a))<straight_tolerance:
+            return (p-i).mag(), [i.x, i.y]
+        else:
+            d1, d2 = (p-P0).mag(), (p-P2).mag()
+            if d1<d2 :
+                return (d1, [P0.x,P0.y])
+            else :
+                return (d2, [P2.x,P2.y])
+
+def csp_to_arc_distance(bez, arc1, arc2, tolerance = 0.01 ): # arc = [start,end,center,alpha]
+    n, i = 10, 0
+    d, d1, dl = (0,(0,0)), (0,(0,0)), 0
+
+    while i<1 or (abs(d1[0]-dl[0])>tolerance and i<4):
+        i += 1
+        dl = d1*1
+        for j in range(n+1):
+            t = float(j)/n
+            p = csp_at_t(bez,t)
+            d = min(point_to_arc_distance(p,arc1), point_to_arc_distance(p,arc2))
+            d1 = max(d1,d)
+        n=n*2
+    return d1[0]
+
+################################################################################
+###
+###     Biarc function
+###
+###     Calculates biarc approximation of cubic super path segment
+###     splits segment if needed or approximates it with straight line
+###
+################################################################################
+def biarc(bez, depth=0):
+
+    def line_approx(bez):
+        return [ [bez[0], bez[1], 'line'] ]
+
+    def biarc_split(bez, depth):
+
+        if depth >= biarc_max_split_depth:
+            return line_approx(bez)
+
+        bez1, bez2 = splitBezier(bez, t=0.5)
+
+        return biarc(bez1, depth+1) + biarc(bez2, depth+1)
+
+    P0 = P(bez[0])
+    P4 = P(bez[3])
+
+    TS = (P(bez[1]) - P0)
+    TE = -(P(bez[2]) - P4)
+    v = P0 - P4
+
+    tsa = TS.angle()
+    tea = TE.angle()
+    va = v.angle()
+
+    if TE.mag() < straight_distance_tolerance and TS.mag() < straight_distance_tolerance:
+        # Both tangents are zero - line straight
+        return line_approx(bez)
+
+    if TE.mag() < straight_distance_tolerance:
+        TE = -(TS + v).unit()
+        r = TS.mag() / v.mag()*2
+    elif TS.mag() < straight_distance_tolerance:
+        TS = -(TE + v).unit()
+        r = 1 / ( TE.mag() / v.mag()*2 )
     else:
-        curves = []
-        b2 = bez
+        r=TS.mag()/TE.mag()
 
-        for t in infl:
-            b1, b2 = splitBezier(b2, t)
-            curves.append(b1)
+    TS = TS.unit()
+    TE = TE.unit()
 
-        curves.append(b2)
+    tang_are_parallel = ((tsa - tea) % math.pi<straight_tolerance
+                            or math.pi-(tsa-tea)%math.pi<straight_tolerance)
 
-    return curves
+    if ( tang_are_parallel and
+                ((v.mag()<straight_distance_tolerance or TE.mag()<straight_distance_tolerance or TS.mag()<straight_distance_tolerance) or
+                    1-abs(TS*v/(TS.mag()*v.mag()))<straight_tolerance)  ):
+                # Both tangents are parallel and start and end are the same - line straight
+                # or one of tangents still smaller then tollerance
 
-def lineFromPoints(p1, p2):
-    """
-    Return line in form ax + by = c given two points on the line
-    """
-    a = p1[1] - p2[1]
-    b = p2[0] - p1[0]
-    c = p2[0] * p1[1] - p1[0] * p2[1]
+                # Both tangents and v are parallel - line straight
+        return line_approx(bez)
 
-    return a, b, c
+    c,b,a = v*v, 2*v*(r*TS+TE), 2*r*(TS*TE-1)
 
-def intersectionOfLines(l1, l2):
+    if v.mag() == 0:
+        return biarc_split(bez, depth)
 
-    det = l1[0] * l2[1] - l1[1] * l2[0]
-    if det == 0:
-        return None
+    asmall = abs(a) < 10**-10
+    bsmall = abs(b) < 10**-10
+    csmall = abs(c) < 10**-10
 
-    detx = l1[2] * l2[1] - l1[1] * l2[2]
-    dety = l1[0] * l2[2] - l1[2] * l2[0]
+    if asmall and b!=0:
+        beta = -c/b
+    elif csmall and a!=0:
+        beta = -b/a
+    elif not asmall:
+        discr = b*b-4*a*c
+        if discr < 0:
+            raise ValueError, (a,b,c,discr)
+        disq = discr**.5
+        beta1 = (-b - disq) / 2 / a
+        beta2 = (-b + disq) / 2 / a
+        if beta1*beta2 > 0 :
+            raise ValueError, (a,b,c,disq,beta1,beta2)
+        beta = max(beta1, beta2)
+    elif asmall and bsmall:
+        return biarc_split(bez, depth)
 
-    x = detx / det
-    y = dety / det
-
-    return x, y
-
-def length(v):
-    math.sqrt(p1[0]**2 + p1[1]**2)
-
-def distance(p1, p2):
-    return math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
-
-def difference(p1, p2):
-    """
-    Vector from p1 to p2 = p2 - p1
-    """
-    return p2[0] - p1[0], p2[1] - p1[1]
-
-def dot(v1, v2):
-    return v1[0] * v2[0] + v1[1] * v2[1]
-
-def incentre(p1, p2, p3):
-
-    a = distance(p2, p3)
-    b = distance(p1, p3)
-    c = distance(p1, p2)
-
-    P = a + b + c
-
-    x = (a * p1[0] + b * p2[0] + c * p3[0]) / P
-    y = (a * p1[1] + b * p2[1] + c * p3[1]) / P
-
-    return x, y
+    alpha = beta * r
+    ab = alpha + beta
+    P1 = P0 + alpha * TS
+    P3 = P4 - beta * TE
+    P2 = (beta / ab) * P1 + (alpha / ab) * P3
 
 
-def circleFromThreePoints(p1, p2, p3):
+    def calculate_arc_params(P0,P1,P2):
+        D = (P0 + P2) / 2
 
-    return c, r, ts, te
+        if (D - P1).mag() == 0:
+            return None, None
 
-def biarcForBezier(bez):
+        R = D - ((D - P0).mag()**2 / (D - P1).mag() )*(P1 - D).unit()
 
-    # from Riskus 2006, section 4
+        p0a = (P0-R).angle()%(2*math.pi)
+        p1a = (P1-R).angle()%(2*math.pi)
+        p2a = (P2-R).angle()%(2*math.pi)
+        alpha = (p2a - p0a) % (2*math.pi)
 
-    # use the midpoint of the the bezier as and arc point
-    # this is approximation strategy A1 in Riskus
-    """
-    l1 = lineFromPoints(bez[0], bez[1])
-    l2 = lineFromPoints(bez[2], bez[3])
+        if (p0a < p2a and (p1a < p0a or p2a < p1a)) or (p2a < p1a < p0a) :
+            alpha = -2*math.pi + alpha
 
-    V = intersectionOfLines(l1, l2)
+        if abs(R.x) > 1000000 or abs(R.y) > 1000000 or (R-P0).mag < min_arc_radius**2 :
+            return None, None
+        else :
+            return R, alpha
 
-    # biarc joining point
-    G = incentre(bez[0], bez[3], V)
+    R1, a1 = calculate_arc_params(P0,P1,P2)
+    R2, a2 = calculate_arc_params(P2,P3,P4)
 
-    ax.plot(G[0], G[1], '+g')
+    if R1 == None or R2 == None or (R1-P0).mag() < straight_tolerance or (R2-P2).mag() < straight_tolerance:
+        return line_approx(bez)
 
-    biarcForPointsAndJoin(bez[0], bez[3], bez[1], bez[2], G)
-    """
+    d = csp_to_arc_distance(bez, [P0,P2,R1,a1],[P2,P4,R2,a2])
 
-    # point on approximation arc at bezier midpoint
-    M = pointOnBezier(bez, 0.5)
+    if d > biarc_tolerance and depth < biarc_max_split_depth:
+        return biarc_split(bez, depth)
 
-    ax.plot(M[0], M[1], '+g')
+    #otherwise construct a line or arc as needed
 
-    c, r, t = circleFromThreePoints(bez[0], bez[3], M)
+    l = (P0-P2).l2()
+    if  l < EMC_TOLERANCE_EQUAL**2 or l<EMC_TOLERANCE_EQUAL**2 * R1.l2() /100 :
+        # arc should be straight otherwise it could be threated as full circle
+        arc1 = [ bez[0], 'line', [P2.x,P2.y] ]
+    else :
+        arc1 = [ bez[0], 'arc', [R1.x,R1.y], a1, [P2.x,P2.y] ]
 
-    plotArc(c,r,t)
+    l = (P4-P2).l2()
+    if  l < EMC_TOLERANCE_EQUAL**2 or l<EMC_TOLERANCE_EQUAL**2 * R2.l2() /100 :
+        # arc should be straight otherwise it could be threated as full circle
+        arc2 = [ [P2.x,P2.y], 'line', [P4.x,P4.y]]
+    else :
+        arc2 = [ [P2.x,P2.y], 'arc', [R2.x,R2.y], a2, [P4.x,P4.y] ]
 
+    return [ arc1, arc2 ]
 
-def circleFromThreePoints(a, b, g):
-    """
-    Arc from a to b via g
-
-    Returns centre, radius, a tuple of the start (clockwise end) and end (ACW end) angles in radians
-    """
-
-    x1 = (b[0] + a[0]) / 2
-    y1 = (b[1] + a[1]) / 2
-
-    dy1 = b[0] - a[0]
-    dx1 = a[1] - b[1]
-
-    x2 = (g[0] + b[0]) / 2
-    y2 = (g[1] + b[1]) / 2
-
-    dy2 = g[0] - b[0]
-    dx2 = b[1] - g[1]
-
-
-    cx = (y1 - y2) * dx1 * dx2 + x2 * dx1 * dy2 - x1 * dy1 * dx2
-    cx = cx / (dx1 * dy2 - dy1 * dx2)
-
-    cy = y1 + (cx - x1) * dy1 / dx1
-
-    c = (cx, cy)
-
-    r = distance(c, a)
-
-    ca = difference(c, a)
-    cb = difference(c, b)
-
-    ta = math.atan2(ca[1], ca[0])
-    tb = math.atan2(cb[1], cb[0])
-
-    am = difference(a, g)
-    ab = difference(a, b)
-
-
-    #left perpendicular of ab
-    abperp = (-ab[1], ab[0])
-
-    print abperp, "am", am
-
-    side = dot(abperp, am)
-
-    print "side", side
-
-    # work out which side the centre point is on, and therefore
-    # which of a and b comes first
-    if side > 0:
-        t = [tb, ta]
+def biarc_curve_segment_length(seg):
+    if seg[1] == "arc" :
+        return math.sqrt((seg[0][0] - seg[2][0])**2 + (seg[0][1] - seg[2][1])**2) * seg[3]
+    elif seg[1] == "line" :
+        return math.sqrt((seg[0][0]-seg[4][0])**2+(seg[0][1]-seg[4][1])**2)
     else:
-        t = [ta, tb]
+        return 0
 
-    # ensure the end angle is greater than the start
-    if t[1] < t[0]:
-        t[1] = t[1] + 2 * math.pi
-
-    assert (t[0] < t[1])
-
-    print t
-
-    #print t
-    return c, r, t
+if __name__ == "__main__":
 
 
-def normalise(p1, p2):
-    """
-    Normalise a vector from p1 to p2 to a vector of length 1 from the origin
-    """
+    bez = [[(16.9753, 0.7421), (18.2203, 2.2238), (21.0939, 2.4017), (23.1643, 1.6148)],
+            [(17.5415, 0.9003), (18.4778, 3.8448), (22.4037, -0.9109), (22.563, 0.7782)]]
 
-    l = distance(p1, p2)
+    ### Workings
 
-    x = (p2[0] - p1[0]) / l
-    y = (p2[1] - p1[1]) / l
+    #Generate the figure
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.set_aspect(1)
+    ax.hold(True)
 
-    return x, y
+    ba = biarc(bez[1])
 
-def biarcForPointsAndJoin(p1, p2, t1, t2, g):
-    """
-    Biarc from p1 (tangent p1->t1) to p2 (tangent p2->t2), with the join at g
-    """
-
-    # normalise the tangent vectors
-    t1 = normalise(p1, t1)
-    t2 = normalise(p2, t2)
-
-    # normal vectors
-    n1 = (-t1[1], t1[0])
-    n2 = (-t2[1], t2[0])
-
-    s1x = ((g[0] - p1[0]) ** 2) / (2 * n1[0] * (g[0] - p1[0]))
-    s1y = ((g[1] - p1[1]) ** 2) / (2 * n1[1] * (g[1] - p1[1]))
-
-    c1x = p1[0] + n1[0] * s1x
-    c1y = p1[1] + n1[1] * s1y
-
-    s2x = ((g[0] - p2[0]) ** 2) / (2 * n2[0] * (g[0] - p2[0]))
-    s2y = ((g[1] - p2[1]) ** 2) / (2 * n2[1] * (g[1] - p2[1]))
-
-    print n1, n2
-
-    c2x = p2[0] + n2[0] * s2x
-    c2y = p2[1] + n2[1] * s2y
-
-    ax.plot(c2x, c2y, 'ok')
-    ax.plot(c1x, c1y, 'ok')
-
-def approximateBezierByArcs(bez):
-
-    curves = splitBezierAtInflections(b)
-
-    for curve in curves:
-        plotBezier(curve)
-
-        biarcForBezier(curve)
+    print "%d arcs" % len(ba)
 
 
-#### Inputs
+    plotBezier(bez[1])
 
-#bez = [[ [1,0], [0.6, -0.2], [0.4, 0.3], [0,0] ],
-#        [ [0,1], [1.5, 4], [0.5, 4], [2,1] ]]
+    for i in range(len(ba)):
+        a = ba[i]
 
-bez = [[(16.9753, 0.7421), (18.2203, 2.2238), (21.0939, 2.4017), (23.1643, 1.6148)],
-        [(17.5415, 0.9003), (18.4778, 3.8448), (22.4037, -0.9109), (22.563, 0.7782)]]
+        ax.plot(a[0][0], a[0][1], 'ok')
+        #ax.plot(a[2][0], a[2][1], 'ok')
+        ax.plot(a[4][0], a[4][1], 'ok')
 
-### Workings
-
-#Generate the figure
-fig = plt.figure()
-ax = fig.add_subplot(111)
-ax.set_aspect(1)
-ax.hold(True)
-
-
-for b in bez:
-    approximateBezierByArcs(b)
-
-
-plt.show()
-#Bosch.
+    plt.show()
