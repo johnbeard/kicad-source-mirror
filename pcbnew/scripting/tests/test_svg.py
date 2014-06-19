@@ -95,7 +95,8 @@ class TestBoard():
 tb = TestBoard()
 
 tb.testFP(SVG.SVGPathConverter(), {
-    "*filename": "/tmp/test.svg"
+    "*filename": "/tmp/ESD_(Susceptible).svg",
+    "*SVG units per mm": "30"
 })
 
 tb.newRow()
