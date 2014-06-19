@@ -148,8 +148,23 @@ class FootprintWizardDrawingAids:
             self.PushTransform(mat)
         return mat
 
-    def TransformPoint(self, x, y):
-        mat = self.dc['transform']
+    def TransformScaleOrigin(self, sx, sy = None, push = True):
+
+        if sy is None:
+            sy = sx
+
+        mat = [sx, 0, 0, 0, sy, 0]
+
+        if push:
+            print "push", mat
+            self.PushTransform(mat)
+        return mat
+
+    def TransformPoint(self, x, y, mat = None):
+
+        if not mat:
+            mat = self.dc['transform']
+
         return pcbnew.wxPoint(  x * mat[0] + y * mat[1] + mat[2],
                                 x * mat[3] + y * mat[4] + mat[5] )
 
@@ -184,6 +199,20 @@ class FootprintWizardDrawingAids:
         circle.SetLayer(self.dc['layer'])
         circle.SetShape(pcbnew.S_CIRCLE)
         circle.SetStartEnd(start, end)
+        self.module.Add(circle)
+
+    def Arc(self, cx, cy, sx, sy, a):
+        circle = pcbnew.EDGE_MODULE(self.module)
+        circle.SetWidth(self.dc['width'])
+
+        center = self.TransformPoint(cx, cy)
+        start = self.TransformPoint(sx, sy)
+
+        circle.SetLayer(self.dc['layer'])
+        circle.SetShape(pcbnew.S_ARC)
+
+        circle.SetAngle(a)
+        circle.SetStartEnd(center, start)
         self.module.Add(circle)
 
 
@@ -259,10 +288,14 @@ class FootprintWizardDrawingAids:
         Draw a rectangular box, centred at (x,y), with given width and
         height
         """
-        self.VLine(x - w/2, y - h/2, h) # left
-        self.VLine(x + w/2, y - h/2, h) # right
-        self.HLine(x - w/2, y + h/2, w) # bottom
-        self.HLine(x - w/2, y - h/2, w) # top
+
+        pts = [ [x - w/2, y - h/2], # left
+                [x + w/2, y - h/2], # right
+                [x + w/2, y + h/2], # bottom
+                [x - w/2, y + h/2], # top
+                [x - w/2, y - h/2]] # close
+
+        self.Polyline(pts)
 
     def NotchedBox(self, x, y, w, h, notchW, notchH):
         """

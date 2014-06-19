@@ -1,49 +1,6 @@
 from __future__ import division
 
-import scipy as sp
-import pylab as plt
 import math
-
-def plotBezier(bez):
-
-    #Setup the parameterisation
-    t = sp.linspace(0,1,100)
-
-    #Read in the origin & destination points
-    POx,POy = bez[0][0], bez[0][1]
-    P3x,P3y = bez[3][0], bez[3][1]
-
-    #Add those to the axes
-    ax.plot(POx,POy, 'ob')
-    ax.plot(P3x,P3y, 'or')
-
-    #Work out the control points
-    P1x, P1y = bez[1][0], bez[1][1]
-    P2x, P2y = bez[2][0], bez[2][1]
-
-    #Plot the control points and their vectors
-    ax.plot((P3x,P2x),(P3y,P2y), 'r')
-    ax.plot((POx,P1x),(POy,P1y), 'b')
-    ax.plot(P1x, P1y, 'ob')
-    ax.plot(P2x, P2y, 'or')
-
-    Bx, By = pointOnBezier(bez, t)
-
-    #Plot the Bezier curve
-    ax.plot(Bx, By, 'k')
-
-def plotArc(c, r, ts):
-
-    def _pointOnArc(c, r, theta):
-        return c[0] + r * sp.cos(theta), c[1] + r * sp.sin(theta)
-
-    #Setup the parameterisation
-    t = sp.linspace(ts[0],ts[1],100)
-
-    Bx, By = _pointOnArc(c,r, t)
-
-    #Plot the Bezier curve
-    ax.plot(Bx, By, 'r')
 
 def pointOnBezier(bez, t):
 
@@ -84,12 +41,12 @@ def splitBezier(bez, t):
             [(x1234,y1234),(x234,y234),(x34,y34),(x4,y4)]]
 
 math.pi2 = math.pi/2
-straight_tolerance = 0.0001
-straight_distance_tolerance = 0.0001
+straight_tolerance = 0.01
+straight_distance_tolerance = 0.01
 min_arc_radius = 0.1
-EMC_TOLERANCE_EQUAL = 0.00001
+EMC_TOLERANCE_EQUAL = 0.01
 biarc_max_split_depth = 4
-biarc_tolerance = 0.1
+biarc_tolerance = 100
 
 def between(c,x,y):
     return x-straight_tolerance<=c<=y+straight_tolerance or y-straight_tolerance<=c<=x+straight_tolerance
@@ -218,7 +175,7 @@ def csp_to_arc_distance(bez, arc1, arc2, tolerance = 0.01 ): # arc = [start,end,
 def biarc(bez, depth=0):
 
     def line_approx(bez):
-        return [ [bez[0], bez[1], 'line'] ]
+        return [ [bez[0], 'line', bez[3]] ]
 
     def biarc_split(bez, depth):
 
@@ -228,6 +185,35 @@ def biarc(bez, depth=0):
         bez1, bez2 = splitBezier(bez, t=0.5)
 
         return biarc(bez1, depth+1) + biarc(bez2, depth+1)
+
+    def biarc_curve_segment_length(seg):
+        if seg[1] == "arc" :
+            return math.sqrt((seg[0][0] - seg[2][0])**2 + (seg[0][1] - seg[2][1])**2) * seg[3]
+        elif seg[1] == "line" :
+            return math.sqrt((seg[0][0]-seg[4][0])**2+(seg[0][1]-seg[4][1])**2)
+        else:
+            return 0
+
+    def calculate_arc_params(P0,P1,P2):
+        D = (P0 + P2) / 2
+
+        if (D - P1).mag() == 0:
+            return None, None
+
+        R = D - ((D - P0).mag()**2 / (D - P1).mag() )*(P1 - D).unit()
+
+        p0a = (P0-R).angle()%(2*math.pi)
+        p1a = (P1-R).angle()%(2*math.pi)
+        p2a = (P2-R).angle()%(2*math.pi)
+        alpha = (p2a - p0a) % (2*math.pi)
+
+        if (p0a < p2a and (p1a < p0a or p2a < p1a)) or (p2a < p1a < p0a) :
+            alpha = -2*math.pi + alpha
+
+        if abs(R.x) > 1000000 or abs(R.y) > 1000000 or (R-P0).mag < min_arc_radius**2 :
+            return None, None
+        else :
+            return R, alpha
 
     P0 = P(bez[0])
     P4 = P(bez[3])
@@ -242,6 +228,7 @@ def biarc(bez, depth=0):
 
     if TE.mag() < straight_distance_tolerance and TS.mag() < straight_distance_tolerance:
         # Both tangents are zero - line straight
+        print "straight"
         return line_approx(bez)
 
     if TE.mag() < straight_distance_tolerance:
@@ -256,7 +243,7 @@ def biarc(bez, depth=0):
     TS = TS.unit()
     TE = TE.unit()
 
-    tang_are_parallel = ((tsa - tea) % math.pi<straight_tolerance
+    tang_are_parallel = ((tsa - tea) % math.pi < straight_tolerance
                             or math.pi-(tsa-tea)%math.pi<straight_tolerance)
 
     if ( tang_are_parallel and
@@ -266,7 +253,10 @@ def biarc(bez, depth=0):
                 # or one of tangents still smaller then tollerance
 
                 # Both tangents and v are parallel - line straight
-        return line_approx(bez)
+        print "straight b"
+        line = line_approx(bez)
+        print line
+        return line
 
     c,b,a = v*v, 2*v*(r*TS+TE), 2*r*(TS*TE-1)
 
@@ -300,28 +290,6 @@ def biarc(bez, depth=0):
     P3 = P4 - beta * TE
     P2 = (beta / ab) * P1 + (alpha / ab) * P3
 
-
-    def calculate_arc_params(P0,P1,P2):
-        D = (P0 + P2) / 2
-
-        if (D - P1).mag() == 0:
-            return None, None
-
-        R = D - ((D - P0).mag()**2 / (D - P1).mag() )*(P1 - D).unit()
-
-        p0a = (P0-R).angle()%(2*math.pi)
-        p1a = (P1-R).angle()%(2*math.pi)
-        p2a = (P2-R).angle()%(2*math.pi)
-        alpha = (p2a - p0a) % (2*math.pi)
-
-        if (p0a < p2a and (p1a < p0a or p2a < p1a)) or (p2a < p1a < p0a) :
-            alpha = -2*math.pi + alpha
-
-        if abs(R.x) > 1000000 or abs(R.y) > 1000000 or (R-P0).mag < min_arc_radius**2 :
-            return None, None
-        else :
-            return R, alpha
-
     R1, a1 = calculate_arc_params(P0,P1,P2)
     R2, a2 = calculate_arc_params(P2,P3,P4)
 
@@ -350,41 +318,3 @@ def biarc(bez, depth=0):
         arc2 = [ [P2.x,P2.y], 'arc', [R2.x,R2.y], a2, [P4.x,P4.y] ]
 
     return [ arc1, arc2 ]
-
-def biarc_curve_segment_length(seg):
-    if seg[1] == "arc" :
-        return math.sqrt((seg[0][0] - seg[2][0])**2 + (seg[0][1] - seg[2][1])**2) * seg[3]
-    elif seg[1] == "line" :
-        return math.sqrt((seg[0][0]-seg[4][0])**2+(seg[0][1]-seg[4][1])**2)
-    else:
-        return 0
-
-if __name__ == "__main__":
-
-
-    bez = [[(16.9753, 0.7421), (18.2203, 2.2238), (21.0939, 2.4017), (23.1643, 1.6148)],
-            [(17.5415, 0.9003), (18.4778, 3.8448), (22.4037, -0.9109), (22.563, 0.7782)]]
-
-    ### Workings
-
-    #Generate the figure
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.set_aspect(1)
-    ax.hold(True)
-
-    ba = biarc(bez[1])
-
-    print "%d arcs" % len(ba)
-
-
-    plotBezier(bez[1])
-
-    for i in range(len(ba)):
-        a = ba[i]
-
-        ax.plot(a[0][0], a[0][1], 'ok')
-        #ax.plot(a[2][0], a[2][1], 'ok')
-        ax.plot(a[4][0], a[4][1], 'ok')
-
-    plt.show()

@@ -94,12 +94,9 @@ class TestBoard():
 
 tb = TestBoard()
 
-
-
-for n in range(2,16):
-    tb.testFP(SVG.SVGPathConverter(), {
-        "*filename": "/tmp/test.svg"
-    })
+tb.testFP(SVG.SVGPathConverter(), {
+    "*filename": "/tmp/test.svg"
+})
 
 tb.newRow()
 
