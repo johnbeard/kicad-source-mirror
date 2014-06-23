@@ -27,7 +27,6 @@ class SVGPathConverter(HFPW.HelpfulFootprintWizardPlugin):
         self.AddParam("SVG", "SVG units per mm", self.uNatural, "20")
 
     def GetValue(self):
-
         return "SVG"
 
     def GetReferencePrefix(self):
@@ -35,14 +34,24 @@ class SVGPathConverter(HFPW.HelpfulFootprintWizardPlugin):
 
     def BuildThisFootprint(self):
 
-        self.draw.TransformScaleOrigin(fmm(1)/self.parameters["SVG"]["*SVG units per mm"])
-
         f = open(self.parameters["SVG"]["*filename"])
         root = fromstring(f.read())
 
         self.segments = 0
         self.lines = 0
         self.arcs = 0
+
+        # transform to internal units
+        self.draw.TransformScaleOrigin(fmm(1)/self.parameters["SVG"]["*SVG units per mm"])
+
+        self.module.Reference().SetVisible(False)
+        self.module.Value().SetVisible(False)
+
+        docWidth = float(root.attrib['width'])
+        docHeight = float(root.attrib['height'])
+
+        # place the drawing page around the origin
+        self.draw.TransformTranslate(-docWidth/2, -docHeight/2)
 
         for e in root.findall('.//%spath' % ns):
             transform = self.collectTransforms(e)
@@ -67,7 +76,7 @@ class SVGPathConverter(HFPW.HelpfulFootprintWizardPlugin):
             self.lines += 4
             self.segments += 4
 
-        self.draw.PopTransform() #pop the scale xfrm
+        self.draw.PopTransform(2) #pop the scale xfrm
 
         #report
         print "SVG had %d segments" % self.segments
@@ -83,8 +92,6 @@ class SVGPathConverter(HFPW.HelpfulFootprintWizardPlugin):
 
             if 'transform' in a.attrib:
                 transforms.append(a.attrib['transform'])
-
-        transforms.reverse()
 
         matrix = self.convertTransformsToMatrix(transforms)
 
@@ -103,10 +110,12 @@ class SVGPathConverter(HFPW.HelpfulFootprintWizardPlugin):
 
             if trans == 'translate':
                 matrix = [1, 0, c[0], 0, 1, c[1]]
+            elif trans == 'scale':
+                matrix = [c[0], 0, 0, 0, c[1], 0]
             elif trans == 'matrix':
                 matrix = [c[0], c[2], c[4], c[1], c[3], c[5]]
             else:
-                raise KeyError("Unknown transform: %s" % trans)
+                raise KeyError("Unknown transform: %s" % t)
 
             m.append(matrix)
 
@@ -142,8 +151,6 @@ class SVGPathConverter(HFPW.HelpfulFootprintWizardPlugin):
 
                 start = (seg.start.real, seg.start.imag)
                 end = (seg.end.real, seg.end.imag)
-
-
 
             else:
                 print "Skipping unknown segment: %s" % seg

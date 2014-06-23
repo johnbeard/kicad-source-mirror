@@ -2,6 +2,7 @@ import pcbnew
 from pcbnew import FromMM as FMM
 
 import os, sys
+import argparse
 import re
 import itertools
 
@@ -91,23 +92,34 @@ class TestBoard():
 
                     mod = ''
 
-
-tb = TestBoard()
-
-tb.testFP(SVG.SVGPathConverter(), {
-    "*filename": "/tmp/ESD_(Susceptible).svg",
-    "*SVG units per mm": "30"
-})
-
-tb.newRow()
+if __name__ == "__main__":
 
 
-filename = "/tmp/svgtest.kicad_pcb"
-modPath = "/tmp/svgtest"
+    parser = argparse.ArgumentParser(description='Convert an SVG to a KiCad footprint.')
+    parser.add_argument('footprints', metavar='F', type=str, nargs='+',
+                   help='SVG files to convert')
+    parser.add_argument('--scale', '-s', metavar='S', type=float,
+                   help='SVG units per mm')
 
-if not os.path.isdir(modPath):
-    os.makedirs(modPath)
+    args = parser.parse_args()
 
-tb.board.Save(filename, pcbnew.IO_MGR.KICAD)
+    tb = TestBoard()
 
-tb.ripOutAndSaveModules(filename, modPath)
+    for fp in args.footprints:
+        tb.testFP(SVG.SVGPathConverter(), {
+            "*filename": fp,
+            "*SVG units per mm": args.scale
+        })
+
+    tb.newRow()
+
+
+    filename = "/tmp/svgtest.kicad_pcb"
+    modPath = "/tmp/svgtest"
+
+    if not os.path.isdir(modPath):
+        os.makedirs(modPath)
+
+    tb.board.Save(filename, pcbnew.IO_MGR.KICAD)
+
+    tb.ripOutAndSaveModules(filename, modPath)

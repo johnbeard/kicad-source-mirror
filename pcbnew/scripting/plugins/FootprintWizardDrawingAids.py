@@ -156,7 +156,6 @@ class FootprintWizardDrawingAids:
         mat = [sx, 0, 0, 0, sy, 0]
 
         if push:
-            print "push", mat
             self.PushTransform(mat)
         return mat
 
@@ -202,6 +201,14 @@ class FootprintWizardDrawingAids:
         self.module.Add(circle)
 
     def Arc(self, cx, cy, sx, sy, a):
+        """
+        Draw an arc based on centre, start and angle
+
+        The transform matrix is applied
+
+        Note that this won't work properly if the result is not a
+        circular arc (eg a horzontal scale)
+        """
         circle = pcbnew.EDGE_MODULE(self.module)
         circle.SetWidth(self.dc['width'])
 
@@ -210,6 +217,10 @@ class FootprintWizardDrawingAids:
 
         circle.SetLayer(self.dc['layer'])
         circle.SetShape(pcbnew.S_ARC)
+
+        # chack if the angle needs to be reverse (a flip scaling)
+        if cmp(self.dc['transform'][0], 0) != cmp(self.dc['transform'][4], 0):
+            a = -a
 
         circle.SetAngle(a)
         circle.SetStartEnd(center, start)

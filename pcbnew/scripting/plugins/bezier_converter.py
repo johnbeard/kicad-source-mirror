@@ -228,7 +228,6 @@ def biarc(bez, depth=0):
 
     if TE.mag() < straight_distance_tolerance and TS.mag() < straight_distance_tolerance:
         # Both tangents are zero - line straight
-        print "straight"
         return line_approx(bez)
 
     if TE.mag() < straight_distance_tolerance:
@@ -253,9 +252,7 @@ def biarc(bez, depth=0):
                 # or one of tangents still smaller then tollerance
 
                 # Both tangents and v are parallel - line straight
-        print "straight b"
         line = line_approx(bez)
-        print line
         return line
 
     c,b,a = v*v, 2*v*(r*TS+TE), 2*r*(TS*TE-1)
