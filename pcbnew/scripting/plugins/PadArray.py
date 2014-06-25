@@ -29,7 +29,7 @@ class PadMaker:
         pad.SetShape(shape)
 
         pad.SetAttribute(pcbnew.PAD_SMD)
-        pad.SetLayerMask(pcbnew.PAD_SMD_DEFAULT_LAYERS)
+        pad.SetLayerMask(pcbnew.PAD_CONN_DEFAULT_LAYERS)
 
         return pad
 
