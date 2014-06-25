@@ -98,7 +98,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Convert an SVG to a KiCad footprint.')
     parser.add_argument('footprints', metavar='F', type=str, nargs='+',
                    help='SVG files to convert')
-    parser.add_argument('--scale', '-s', metavar='S', type=float,
+    parser.add_argument('--scale', '-s', metavar='S', type=float, default=10,
                    help='SVG units per mm')
 
     args = parser.parse_args()

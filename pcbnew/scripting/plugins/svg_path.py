@@ -32,6 +32,34 @@ class SVGPathConverter(HFPW.HelpfulFootprintWizardPlugin):
     def GetReferencePrefix(self):
         return ""
 
+    def extractSvgStyle(self, e):
+
+        style = {}
+
+        if 'style' not in e.attrib:
+            return style
+
+        styles = [x.strip() for x in e.attrib['style'].split(';')]
+
+        for s in styles:
+            k, v = s.split(':', 1)
+
+            style[k] = v
+
+        return style
+
+    def SetStrokeWidth(self, e, scale, transform):
+        style = self.extractSvgStyle(e)
+
+        if 'stroke-width' in style:
+            w = float(style['stroke-width'])
+        else:
+            w = 0.2 #default
+
+        w = int(round(w * transform[0] * scale)) #assume isotropic scaling, there's not much we can do if not, that's up to the editor!
+
+        self.draw.SetWidth(w)
+
     def BuildThisFootprint(self):
 
         f = open(self.parameters["SVG"]["*filename"])
@@ -42,7 +70,8 @@ class SVGPathConverter(HFPW.HelpfulFootprintWizardPlugin):
         self.arcs = 0
 
         # transform to internal units
-        self.draw.TransformScaleOrigin(fmm(1)/self.parameters["SVG"]["*SVG units per mm"])
+        scaleToMM = fmm(1)/self.parameters["SVG"]["*SVG units per mm"]
+        self.draw.TransformScaleOrigin(scaleToMM)
 
         self.module.Reference().SetVisible(False)
         self.module.Value().SetVisible(False)
@@ -58,6 +87,8 @@ class SVGPathConverter(HFPW.HelpfulFootprintWizardPlugin):
 
             d = svg.path.parse_path(e.attrib['d'])
 
+            self.SetStrokeWidth(e, scaleToMM, transform)
+
             self.addPathToModule(d, transform)
 
         for e in root.findall('.//%srect' % ns):
@@ -68,6 +99,8 @@ class SVGPathConverter(HFPW.HelpfulFootprintWizardPlugin):
 
             self.draw.PushTransform(transform)
             self.draw.TransformTranslate(w/2, h/2) #svg rects are referenced from the corner, not centre
+
+            self.SetStrokeWidth(e, scaleToMM, transform)
 
             self.draw.Box(x,y,w,h)
 
@@ -92,6 +125,8 @@ class SVGPathConverter(HFPW.HelpfulFootprintWizardPlugin):
 
             if 'transform' in a.attrib:
                 transforms.append(a.attrib['transform'])
+
+        transforms.reverse()
 
         matrix = self.convertTransformsToMatrix(transforms)
 
